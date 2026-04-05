@@ -109,7 +109,7 @@ const startServer = async () => {
       console.log(` Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("❌ Unable to connect to the database:", error);
+    console.error("Unable to connect to the database:", error);
   }
 };
 
