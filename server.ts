@@ -5,47 +5,48 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createServer } from "http";
 import { Server as SocketIOServer } from "socket.io";
-import sequelize from "./server/config/database";
-import authRoutes from "./server/routes/authRoutes";
-import userRoutes from "./server/routes/userRoutes";
-import courseRoutes from "./server/routes/courseRoutes";
-import notificationRoutes from "./server/routes/notificationRoutes";
-import invoiceRoutes from "./server/routes/invoiceRoutes";
-import resourceRoutes from "./server/routes/resourceRoutes";
-import gradeRoutes from "./server/routes/gradeRoutes";
-import majorRoutes from "./server/routes/majorRoutes";
-import subjectRoutes from "./server/routes/subjectRoutes";
-import semesterRoutes from "./server/routes/semesterRoutes";
-import enrollmentRoutes from "./server/routes/enrollmentRoutes";
-import departmentRoutes from "./server/routes/departmentRoutes";
-import classRoutes from "./server/routes/classRoutes";
-import roomRoutes from "./server/routes/roomRoutes";
-import curriculumRoutes from "./server/routes/curriculumRoutes";
-import attendanceRoutes from "./server/routes/attendanceRoutes";
-import paymentRoutes from "./server/routes/paymentRoutes";
 import { EventEmitter } from "events";
 
-// (Vẫn giữ lại import các Model để Sequelize nhận diện các quan hệ - Associations)
-import User from "./server/models/User";
-import Course from "./server/models/Course";
-import Notification from "./server/models/Notification";
-import Invoice from "./server/models/Invoice";
-import Resource from "./server/models/Resource";
-import { Grade } from "./server/models/Grade";
-import Major from "./server/models/Major";
-import Subject from "./server/models/Subject";
-import Curriculum from "./server/models/Curriculum";
-import Department from "./server/models/Department";
-import Class from "./server/models/Class";
-import Room from "./server/models/Room";
-import Semester from "./server/models/Semester";
-import Attendance from "./server/models/Attendance";
+// --- IMPORT CẤU HÌNH & ROUTES (Đã thêm đuôi .ts) ---
+import sequelize from "./server/config/database.ts";
+import authRoutes from "./server/routes/authRoutes.ts";
+import userRoutes from "./server/routes/userRoutes.ts";
+import courseRoutes from "./server/routes/courseRoutes.ts";
+import notificationRoutes from "./server/routes/notificationRoutes.ts";
+import invoiceRoutes from "./server/routes/invoiceRoutes.ts";
+import resourceRoutes from "./server/routes/resourceRoutes.ts";
+import gradeRoutes from "./server/routes/gradeRoutes.ts";
+import majorRoutes from "./server/routes/majorRoutes.ts";
+import subjectRoutes from "./server/routes/subjectRoutes.ts";
+import semesterRoutes from "./server/routes/semesterRoutes.ts";
+import enrollmentRoutes from "./server/routes/enrollmentRoutes.ts";
+import departmentRoutes from "./server/routes/departmentRoutes.ts";
+import classRoutes from "./server/routes/classRoutes.ts";
+import roomRoutes from "./server/routes/roomRoutes.ts";
+import curriculumRoutes from "./server/routes/curriculumRoutes.ts";
+import attendanceRoutes from "./server/routes/attendanceRoutes.ts";
+import paymentRoutes from "./server/routes/paymentRoutes.ts";
+
+// --- IMPORT MODELS ---
+import "./server/models/User.ts";
+import "./server/models/Course.ts";
+import "./server/models/Notification.ts";
+import "./server/models/Invoice.ts";
+import "./server/models/Resource.ts";
+import "./server/models/Grade.ts";
+import "./server/models/Major.ts";
+import "./server/models/Subject.ts";
+import "./server/models/Curriculum.ts";
+import "./server/models/Department.ts";
+import "./server/models/Class.ts";
+import "./server/models/Room.ts";
+import "./server/models/Semester.ts";
+import "./server/models/Attendance.ts";
 
 declare global {
   var notificationEmitter: EventEmitter;
 }
 
-// Initialize global event emitter for notifications
 if (!global.notificationEmitter) {
   global.notificationEmitter = new EventEmitter();
 }
@@ -56,35 +57,27 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: "*" },
+  cors: { origin: "http://localhost:5173" },
 });
 
-// Make io accessible to routes
 app.set("io", io);
 
-// Listen for new notifications and emit via socket.io
 global.notificationEmitter.on("new_notification", (notification) => {
   io.emit("notification", notification);
 });
 
 const PORT = 3001;
 
-// Middleware
+// Middleware CORS - Kết nối với cổng Frontend
 app.use(cors({
-  origin: [
-    "https://trangsv.congsinhvieen.id.vn"
-  ],
+  origin: "http://localhost:5173",
   credentials: true
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use((req, res, next) => {
-  console.log("Request:", req.url);
-  next();
-});
 
-// Routes
+// API Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/courses", courseRoutes);
@@ -103,50 +96,22 @@ app.use("/api/curriculums", curriculumRoutes);
 app.use("/api/attendance", attendanceRoutes);
 app.use("/api/payments", paymentRoutes);
 
-// Basic Route
 app.get("/api/health", (req, res) => {
-  res.json({
-    status: "ok",
-    message: "University Management System API is running",
-  });
+  res.json({ status: "ok", message: "Backend API is running on port 3001" });
 });
 
-// Start Server
 const startServer = async () => {
   try {
     await sequelize.authenticate();
-    console.log("Database MySQL connected successfully.");
-
-    // ĐÃ XÓA: sequelize.sync({ force: true }) và seedData()
-    // Hệ thống giờ sẽ sử dụng npx sequelize-cli db:migrate và db:seed:all
-
-    // Vite integration for development
-    const isProduction = process.env.NODE_ENV === "production";
-
-    if (!isProduction) {
-      const { createServer: createViteServer } = await import("vite");
-      const vite = await createViteServer({
-        server: { middlewareMode: true },
-        appType: "spa",
-      });
-      app.use(vite.middlewares);
-    } else {
-      // Serve static files in production
-      const distPath = path.join(process.cwd(), "dist");
-      app.use(express.static(distPath));
-      app.get("*", (req, res) => {
-        res.sendFile(path.join(distPath, "index.html"));
-      });
-    }
+    console.log(" Database MySQL connected successfully.");
 
     httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(`Server running on http://localhost:${PORT}`);
+      console.log(` Server running on http://localhost:${PORT}`);
     });
   } catch (error) {
-    console.error("Unable to connect to the database:", error);
+    console.error("❌ Unable to connect to the database:", error);
   }
 };
 
 startServer();
-
 export { sequelize };
