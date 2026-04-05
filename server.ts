@@ -115,3 +115,4 @@ const startServer = async () => {
 
 startServer();
 export { sequelize };
+export default app;
