@@ -57,7 +57,7 @@ const __dirname = path.dirname(__filename);
 const app = express();
 const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
-  cors: { origin: "http://localhost:5173" },
+  cors: { origin: "https://trangsv.congsinhvieen.id.vn" },
 });
 
 app.set("io", io);
@@ -70,7 +70,7 @@ const PORT = 3001;
 
 // Middleware CORS - Kết nối với cổng Frontend
 app.use(cors({
-  origin: "http://localhost:5173",
+  origin: "https://trangsv.congsinhvieen.id.vn",
   credentials: true
 }));
 
@@ -106,7 +106,7 @@ const startServer = async () => {
     console.log(" Database MySQL connected successfully.");
 
     httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(` Server running on http://localhost:${PORT}`);
+      console.log(` Server running on https://trangsv.congsinhvieen.id.vn`);
     });
   } catch (error) {
     console.error("Unable to connect to the database:", error);

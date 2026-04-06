@@ -72,7 +72,7 @@ export const markAsRead = async (req: Request, res: Response) => {
     // or ignore marking broadcasts as read globally.
     
     const notification = await Notification.findByPk(id);
-    if (!notification) {
+    if (!notification) { 
       return res.status(404).json({ message: 'Notification not found' });
     }
     
