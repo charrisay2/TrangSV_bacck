@@ -8,12 +8,12 @@ export const getNotifications = async (req: Request, res: Response) => {
     const user = req.user;
     
     let whereClause = {};
-    if (user.role !== 'ADMIN') {
+    if (user?.role !== 'ADMIN') {
       whereClause = {
         [Op.or]: [
           { targetRole: 'ALL' },
-          { targetRole: user.role },
-          { targetUserId: user.id }
+          { targetRole: user?.role },
+          { targetUserId: user?.id }
         ]
       };
     }
@@ -76,7 +76,7 @@ export const markAsRead = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Notification not found' });
     }
     
-    if (notification.targetUserId === user.id) {
+    if (notification.targetUserId === user?.id) {
       notification.isRead = true;
       await notification.save();
     }
