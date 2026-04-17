@@ -11,13 +11,12 @@ const router = express.Router();
 
 router
   .route("/")
-  // ĐÃ FIX: Thêm quyền 'TEACHER' vào để Giảng viên có thể xem được tên Sinh viên
-  .get(protect, authorize("ADMIN", "TEACHER"), getUsers)
+  .get(protect, authorize("ADMIN", "TEACHER", "STUDENT"), getUsers)
   .post(protect, authorize("ADMIN"), createUser);
 
 router
   .route("/:id")
-  .put(protect, authorize("ADMIN"), updateUser)
-  .delete(protect, authorize("ADMIN"), deleteUser);
+  .put(protect, authorize("ADMIN"), updateUser);
+
 
 export default router;

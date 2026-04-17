@@ -1,7 +1,7 @@
-import { Request, Response } from 'express';
-import Enrollment from '../models/Enrollment';
-import Course from '../models/Course';
-import User from '../models/User';
+import { Request, Response } from "express";
+import Enrollment from "../models/Enrollment";
+import Course from "../models/Course";
+import User from "../models/User";
 
 // @desc    Get all enrollments
 // @route   GET /api/enrollments
@@ -10,13 +10,13 @@ export const getEnrollments = async (req: Request, res: Response) => {
   try {
     const enrollments = await Enrollment.findAll({
       include: [
-        { model: Course, as: 'course' },
-        { model: User, as: 'student', attributes: ['id', 'name', 'email'] }
-      ]
+        { model: Course, as: "course" },
+        { model: User, as: "student", attributes: ["id", "name", "email"] },
+      ],
     });
     res.json(enrollments);
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
@@ -31,9 +31,9 @@ export const updateEnrollment = async (req: Request, res: Response) => {
       await enrollment.save();
       res.json(enrollment);
     } else {
-      res.status(404).json({ message: 'Enrollment not found' });
+      res.status(404).json({ message: "Enrollment not found" });
     }
   } catch (error) {
-    res.status(500).json({ message: 'Server Error' });
+    res.status(500).json({ message: "Server Error" });
   }
 };
