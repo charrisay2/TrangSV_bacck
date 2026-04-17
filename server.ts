@@ -66,13 +66,15 @@ global.notificationEmitter.on("new_notification", (notification) => {
   io.emit("notification", notification);
 });
 
-const PORT = 3001;
+const PORT = Number( process.env.PORT) || 3001;
 
 // Middleware CORS - Kết nối với cổng Frontend
-app.use(cors({
-  origin: "https://trangsv.congsinhvieen.id.vn",
-  credentials: true
-}));
+app.use(
+  cors({
+    origin: "https://trangsv.congsinhvieen.id.vn",
+    credentials: true,
+  }),
+);
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -103,16 +105,16 @@ app.get("/api/health", (req, res) => {
 const startServer = async () => {
   try {
     await sequelize.authenticate();
-    console.log(" Database MySQL connected successfully.");
-
-    httpServer.listen(PORT, "0.0.0.0", () => {
-      console.log(` Server running on https://trangsv.congsinhvieen.id.vn`);
-    });
+    console.log("Database MySQL connected successfully.");
   } catch (error) {
     console.error("Unable to connect to the database:", error);
   }
-};
 
+  // LUÔN chạy server
+  httpServer.listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on port ${PORT}`);
+  });
+};
 startServer();
 export { sequelize };
 export default app;
