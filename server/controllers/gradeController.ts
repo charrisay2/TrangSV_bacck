@@ -18,6 +18,7 @@ export const getGrades = async (req: Request, res: Response) => {
 
 export const saveGrades = async (req: Request, res: Response) => {
   try {
+     console.log("REQ BODY:", req.body);
     const { courseId, semester, grades } = req.body;
     // grades is an array of { studentId, midterm, final }
 
