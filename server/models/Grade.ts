@@ -57,5 +57,6 @@ Grade.init(
   {
     sequelize,
     modelName: 'Grade',
+    tableName: 'grades',
   }
 );
