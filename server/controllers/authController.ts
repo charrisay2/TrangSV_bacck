@@ -31,7 +31,7 @@ export const login = async (req: Request, res: Response) => {
         .json({ message: "Tài khoản hoặc mật khẩu không chính xác" });
     }
 
-    // 3. Generate Token
+    // 3. Generate Token    
     const payload = {
       id: user.id,
       role: user.role,

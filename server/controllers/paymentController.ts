@@ -10,8 +10,8 @@ const PAYOS_CONFIG = {
     "8d2420925fb301a44b4bcddab363e04120a6f3c10b9cf67d28051678087357d8",
   endpoint: "https://api-merchant.payos.vn/v2/payment-requests",
   // FIX ĐIỀU HƯỚNG: Thêm ?module=finance để React App tự mở lại đúng tab Học phí
-  returnUrl: "http://localhost:3001/?module=finance",
-  cancelUrl: "http://localhost:3001/?module=finance",
+  returnUrl: "https://trangsv.congsinhvieen.id.vn/?module=finance",
+  cancelUrl: "https://trangsv.congsinhvieen.id.vn/?module=finance",
 };
 
 export const createPayOSPayment = async (req: Request, res: Response) => {
