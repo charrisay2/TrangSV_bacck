@@ -19,7 +19,7 @@ export class Attendance extends Model<AttendanceAttributes, AttendanceCreationAt
   public courseId!: number;
   public date!: string;
   public status!: 'Present' | 'Absent' | 'Late';
-
+  // phải ghi nhận lại điểm danh để đuổi 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -67,4 +67,6 @@ Attendance.init(
 Attendance.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 Course.hasMany(Attendance, { foreignKey: 'courseId', as: 'attendances' });
 
+Attendance.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+User.hasMany(Attendance, { foreignKey: 'studentId', as: 'attendances' });
 export default Attendance;

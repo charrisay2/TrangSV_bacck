@@ -38,7 +38,7 @@ class Course extends Model<CourseAttributes, CourseCreationAttributes> implement
   public semesterId!: number;
   public totalPeriods!: number;
   public weeks!: number;
-
+// một khóa học có thể óc nhiều hs và tương tự 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }

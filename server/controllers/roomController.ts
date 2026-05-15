@@ -21,7 +21,7 @@ export const createRoom = async (req: Request, res: Response) => {
   try {
     const { name, capacity, building, status } = req.body;
     const room = await Room.create({ name, capacity, building, status });
-    res.status(201).json(room);
+    res.status(201).json( );
   } catch (error) {
     res.status(500).json({ message: "Server Error" });
   }

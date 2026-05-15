@@ -1,27 +1,38 @@
-import { DataTypes, Model, Optional } from 'sequelize';
-import sequelize from '../config/database';
-import { EventEmitter } from 'events';
+import { DataTypes, Model, Optional } from "sequelize";
+import sequelize from "../config/database";
+import { EventEmitter } from "events";
 
 interface NotificationAttributes {
   id: number;
   title?: string;
   message: string;
-  type: 'SYSTEM' | 'CLASS_UPDATE' | 'BROADCAST' | 'FEE_REMINDER';
-  targetRole: 'ALL' | 'ADMIN' | 'TEACHER' | 'STUDENT';
+  type: "SYSTEM" | "CLASS_UPDATE" | "BROADCAST" | "FEE_REMINDER" | "WARNING";
+  targetRole: "ALL" | "ADMIN" | "TEACHER" | "STUDENT";
   targetUserId?: number; // If specific to a user
   classId?: number; // If related to a specific class
   isRead: boolean;
   createdAt?: Date;
 }
 
-interface NotificationCreationAttributes extends Optional<NotificationAttributes, 'id' | 'isRead'> {}
+interface NotificationCreationAttributes extends Optional<
+  NotificationAttributes,
+  "id" | "isRead"
+> {}
 
-class Notification extends Model<NotificationAttributes, NotificationCreationAttributes> implements NotificationAttributes {
+class Notification
+  extends Model<NotificationAttributes, NotificationCreationAttributes>
+  implements NotificationAttributes
+{
   public id!: number;
   public title?: string;
   public message!: string;
-  public type!: 'SYSTEM' | 'CLASS_UPDATE' | 'BROADCAST' | 'FEE_REMINDER';
-  public targetRole!: 'ALL' | 'ADMIN' | 'TEACHER' | 'STUDENT';
+  public type!:
+    | "SYSTEM"
+    | "CLASS_UPDATE"
+    | "BROADCAST"
+    | "FEE_REMINDER"
+    | "WARNING";
+  public targetRole!: "ALL" | "ADMIN" | "TEACHER" | "STUDENT";
   public targetUserId?: number;
   public classId?: number;
   public isRead!: boolean;
@@ -46,14 +57,20 @@ Notification.init(
       allowNull: false,
     },
     type: {
-      type: DataTypes.ENUM('SYSTEM', 'CLASS_UPDATE', 'BROADCAST', 'FEE_REMINDER'),
+      type: DataTypes.ENUM(
+        "SYSTEM",
+        "CLASS_UPDATE",
+        "BROADCAST",
+        "FEE_REMINDER",
+        "WARNING",
+      ),
       allowNull: false,
-      defaultValue: 'SYSTEM',
+      defaultValue: "SYSTEM",
     },
     targetRole: {
-      type: DataTypes.ENUM('ALL', 'ADMIN', 'TEACHER', 'STUDENT'),
+      type: DataTypes.ENUM("ALL", "ADMIN", "TEACHER", "STUDENT"),
       allowNull: false,
-      defaultValue: 'ALL',
+      defaultValue: "ALL",
     },
     targetUserId: {
       type: DataTypes.INTEGER,
@@ -71,16 +88,16 @@ Notification.init(
   },
   {
     sequelize,
-    tableName: 'notifications',
+    tableName: "notifications",
     hooks: {
       afterCreate: (notification) => {
         if (!global.notificationEmitter) {
           global.notificationEmitter = new EventEmitter();
         }
-        global.notificationEmitter.emit('new_notification', notification);
-      }
-    }
-  }
+        global.notificationEmitter.emit("new_notification", notification);
+      },
+    },
+  },
 );
 
 export default Notification;

@@ -49,4 +49,8 @@ Resource.init(
   }
 );
 
+Resource.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+Course.hasMany(Resource, { foreignKey: 'courseId', as: 'resources' });
+
 export default Resource;
+// phải ràng buộc lại để chỉ sinh viên đó đúng ngày giờ dô coi thôi

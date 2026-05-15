@@ -17,7 +17,7 @@ class Curriculum extends Model<CurriculumAttributes, CurriculumCreationAttribute
   public majorId!: number;
   public subjectId!: number;
   public semesterNumber!: number;
-
+  
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }

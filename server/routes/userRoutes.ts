@@ -18,5 +18,5 @@ router
   .route("/:id")
   .put(protect, authorize("ADMIN"), updateUser);
 
-
+ 
 export default router;

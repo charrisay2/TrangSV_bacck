@@ -61,5 +61,5 @@ Class.init(
 
 Major.hasMany(Class, { foreignKey: 'majorId', as: 'classes' });
 Class.belongsTo(Major, { foreignKey: 'majorId', as: 'major' });
-
+// bây giờ sv cntt không thể học kinh tế 
 export default Class;

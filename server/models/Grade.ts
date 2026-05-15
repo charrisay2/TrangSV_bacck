@@ -1,6 +1,7 @@
 import { Model, DataTypes } from 'sequelize';
 import sequelize from '../config/database';
-
+import User from './User';
+import Course from './Course';
 export interface GradeAttributes {
   id: number;
   studentId: number;
@@ -59,4 +60,11 @@ Grade.init(
     modelName: 'Grade',
     tableName: 'grades',
   }
+
+  
 );
+Grade.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
+User.hasMany(Grade, { foreignKey: 'studentId', as: 'grades' });
+
+Grade.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
+Course.hasMany(Grade, { foreignKey: 'courseId', as: 'grades' });
