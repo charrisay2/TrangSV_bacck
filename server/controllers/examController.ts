@@ -98,33 +98,60 @@ export const uploadQuestions = async (req: Request, res: Response) => {
 };
 
 // PUBLISH EXAM
+
 export const publishExam = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
 
     const exam = await Exam.findByPk(id);
-    if (!exam) return res.status(404).json({ message: "Not found" });
 
-    exam.status = status;
+    if (!exam) {
+      return res.status(404).json({ message: "Not found" });
+    }
+
+    exam.status = "PUBLISHED";
+
     await exam.save();
 
     res.json(exam);
   } catch (error) {
-    res.status(500).json({ message: "Please fill PUBLISHED" });
-    // khi bấm vào chuyển sang PU
+    console.error(error);
+    res.status(500).json({ message: "Server Error" });
   }
 };
 
+export const autoCompleteExams = async () => {
+  try {
+    await Exam.update(
+      {
+        status: "COMPLETED",
+      },
+      {
+        where: {
+          status: "PUBLISHED",
+          endTime: {
+            [Op.lt]: new Date(),
+          },
+        },
+      },
+    );
+
+    console.log("Auto completed expired exams");
+  } catch (error) {
+    console.error("Auto complete exams error:", error);
+  }
+};
 // GET STUDENT EXAMS
 export const getStudentExams = async (req: Request, res: Response) => {
   try {
+    await autoCompleteExams();
+
     const studentId = Number((req as any).user?.id);
 
     const exams = await Exam.findAll({
       where: {
         status: {
-          [Op.in]: ["PUBLISHED", "COMPLETED"], // FIX
+          [Op.in]: ["PUBLISHED", "COMPLETED"],
         },
       },
       include: [
@@ -149,6 +176,8 @@ export const getStudentExams = async (req: Request, res: Response) => {
 // GET EXAM FOR STUDENT
 export const getExamForStudent = async (req: Request, res: Response) => {
   try {
+    await autoCompleteExams();
+
     const { id } = req.params;
 
     const exam = await Exam.findByPk(id, {
@@ -172,6 +201,7 @@ export const getExamForStudent = async (req: Request, res: Response) => {
 // SUBMIT EXAM
 export const submitExam = async (req: Request, res: Response) => {
   try {
+    await autoCompleteExams();
     const { id } = req.params;
     const { answers, cheatingAttempts = 0 } = req.body;
 
@@ -182,6 +212,12 @@ export const submitExam = async (req: Request, res: Response) => {
     });
 
     if (!exam) return res.status(404).json({ message: "Not found" });
+    
+    if (exam.status === "COMPLETED") {
+      return res.status(400).json({
+        message: "Bài thi đã kết thúc",
+      });
+    }
 
     const questions: any[] = (exam as any).questions || [];
 
@@ -207,7 +243,7 @@ export const submitExam = async (req: Request, res: Response) => {
       status: hasEssay ? "PENDING" : "GRADED",
       submittedAt: new Date(),
     });
-    
+
     res.status(201).json(submission);
   } catch (error) {
     console.error(error);
@@ -247,8 +283,7 @@ export const gradeSubmission = async (req: Request, res: Response) => {
     const { score } = req.body;
 
     const submission = await ExamSubmission.findByPk(submissionId);
-    if (!submission)
-      return res.status(404).json({ message: "Not found" });
+    if (!submission) return res.status(404).json({ message: "Not found" });
 
     submission.score = score;
     submission.status = "GRADED";

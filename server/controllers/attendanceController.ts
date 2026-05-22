@@ -34,7 +34,8 @@ export const getCourseAttendance = async (req: Request, res: Response) => {
 export const saveAttendance = async (req: Request, res: Response) => {
   try {
     const { courseId, date, records } = req.body; // records: { studentId: status }
-
+    // courseid lấy từ pagram xuống
+    // date lấy ngày hôm nay
     if (!courseId || !date || !records) {
       return res.status(400).json({ message: 'Missing required fields' });
     }

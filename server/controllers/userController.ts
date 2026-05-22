@@ -4,6 +4,7 @@ import Class from '../models/Class';
 import Department from '../models/Department';
 import Major from '../models/Major';
 import bcrypt from 'bcryptjs';
+import { Op } from 'sequelize';
 
 // @desc    Get all users
 // @route   GET /api/users
@@ -29,7 +30,69 @@ export const getUsers = async (req: Request, res: Response) => {
 // @access  Private/Admin
 export const createUser = async (req: Request, res: Response) => {
   try {
-    const { username, password, name, email, phone, address, joinDate, role, avatar, classId, departmentId, majorId, status } = req.body;
+    const { name, phone, address, joinDate, role, avatar, classId, departmentId, majorId, status } = req.body;
+    let { username, email, password } = req.body;
+
+    if (!username) {
+      if (role === 'STUDENT') {
+        const studentClass = await Class.findByPk(classId);
+        let yearPrefix = new Date().getFullYear().toString().slice(-2);
+        if (studentClass && studentClass.cohort) {
+          const match = studentClass.cohort.match(/\d+$/);
+          if (match) {
+            yearPrefix = match[0].slice(-2);
+          }
+        }
+        
+        const lastUser = await User.findOne({
+          where: { role: 'STUDENT', username: { [Op.like]: `${yearPrefix}%` } },
+          order: [['username', 'DESC']]
+        });
+        
+        let counter = 1;
+        if (lastUser && lastUser.username) {
+            const lastCounter = parseInt(lastUser.username.slice(2));
+            if (!isNaN(lastCounter)) {
+                counter = lastCounter + 1;
+            }
+        }
+        username = `${yearPrefix}${counter.toString().padStart(4, '0')}`;
+      } else if (role === 'TEACHER') {
+        const lastTeacher = await User.findOne({
+          where: { role: 'TEACHER', username: { [Op.like]: `GV%` } },
+          order: [['username', 'DESC']]
+        });
+        let counter = 1;
+        if (lastTeacher && lastTeacher.username) {
+          const lastCounter = parseInt(lastTeacher.username.slice(2));
+          if (!isNaN(lastCounter)) {
+            counter = lastCounter + 1;
+          }
+        }
+        username = `GV${counter.toString().padStart(4, '0')}`;
+      } else {
+        const lastAdmin = await User.findOne({
+            where: { role: 'ADMIN', username: { [Op.like]: `AD%` } },
+            order: [['username', 'DESC']]
+          });
+          let counter = 1;
+          if (lastAdmin && lastAdmin.username) {
+            const lastCounter = parseInt(lastAdmin.username.slice(2));
+            if (!isNaN(lastCounter)) {
+              counter = lastCounter + 1;
+            }
+          }
+          username = `AD${counter.toString().padStart(4, '0')}`;
+      }
+    }
+
+    if (!email) {
+      email = `${username}@uni.edu.vn`;
+    }
+    
+    if (!password) {
+      password = '123';
+    }
 
     const userExists = await User.findOne({ where: { username } });
     if (userExists) {
@@ -55,6 +118,7 @@ export const createUser = async (req: Request, res: Response) => {
       departmentId,
       majorId,
       status: status || 'ACTIVE',
+  
     });
 
     const userWithAssociations = await User.findByPk(user.id, {
