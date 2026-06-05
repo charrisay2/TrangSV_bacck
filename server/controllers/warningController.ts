@@ -31,8 +31,9 @@ export const createWarning = async (req: Request, res: Response) => {
 
     // Notify student
     await Notification.create({
+      title: 'Thông báo Cảnh báo',
       message: `CẢNH BÁO: ${reason}`,
-      type: 'WARNING',
+      type: 'SYSTEM',
       targetRole: 'STUDENT',
       targetUserId: studentId,
       isRead: false
@@ -56,6 +57,20 @@ export const updateWarningStatus = async (req: Request, res: Response) => {
     await warning.save();
 
     res.json(warning);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+export const getStudentWarnings = async (req: Request, res: Response) => {
+  try {
+    // @ts-ignore
+    const studentId = req.user?.id;
+    const warnings = await Warning.findAll({
+      where: { studentId, status: 'ACTIVE' },
+      order: [['createdAt', 'DESC']]
+    });
+    res.json(warnings);
   } catch (error) {
     res.status(500).json({ message: 'Server error' });
   }
@@ -87,8 +102,9 @@ export const evaluateRules = async (req: Request, res: Response) => {
           });
           
           await Notification.create({
+            title: 'Cảnh báo đăng ký học phần',
             message: `Hệ thống ghi nhận bạn đăng ký dưới 15 tín chỉ. Vui lòng đăng ký thêm học phần.`,
-            type: 'WARNING',
+            type: 'SYSTEM',
             targetRole: 'STUDENT',
             targetUserId: student.id,
             isRead: false

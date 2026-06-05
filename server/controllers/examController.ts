@@ -1,29 +1,44 @@
+
 import { Request, Response } from "express";
 import { Op } from "sequelize";
+
 import Exam from "../models/Exam";
 import ExamQuestion from "../models/ExamQuestion";
 import ExamSubmission from "../models/ExamSubmission";
 import Course from "../models/Course";
 import User from "../models/User";
 
-// GET TEACHER EXAMS
+// ================= GET TEACHER EXAMS =================
 export const getTeacherExams = async (req: Request, res: Response) => {
   try {
     const teacherId = (req as any).user?.id;
 
-    const courses = await Course.findAll({ where: { teacherId } });
+    const courses = await Course.findAll({
+      where: { teacherId },
+    });
+
     const courseIds = courses.map((c) => c.id);
 
     const exams = await Exam.findAll({
       where: {
         courseId: {
-          [Op.in]: courseIds, // FIX
+          [Op.in]: courseIds,
         },
       },
       include: [
-        { model: Course, as: "course", attributes: ["id", "name", "code"] },
-        { model: ExamQuestion, as: "questions" },
-        { model: ExamSubmission, as: "submissions" },
+        {
+          model: Course,
+          as: "course",
+          attributes: ["id", "name", "code"],
+        },
+        {
+          model: ExamQuestion,
+          as: "questions",
+        },
+        {
+          model: ExamSubmission,
+          as: "submissions",
+        },
       ],
       order: [["createdAt", "DESC"]],
     });
@@ -35,28 +50,45 @@ export const getTeacherExams = async (req: Request, res: Response) => {
   }
 };
 
-// CREATE EXAM
 export const createExam = async (req: Request, res: Response) => {
   try {
-    const { courseId, title, description, startTime, endTime, isLockdown } =
-      req.body;
+    const {
+      courseId,
+      title,
+      description,
+      startTime,
+      endTime,
+      isLockdown,
+    } = req.body;
 
-    const teacherId = (req as any).user?.id;
+    const user = (req as any).user;
+    const teacherId = user?.id;
+    const role = user?.role;
 
     const course = await Course.findByPk(courseId);
-    if (!course)
-      return res.status(404).json({ message: "Không tìm thấy môn học" });
 
-    if (String(course.teacherId) !== String(teacherId)) {
-      return res.status(403).json({ message: "Không có quyền" });
+    if (!course) {
+      return res.status(404).json({
+        message: "Không tìm thấy môn học",
+      });
+    }
+
+    if (
+      role !== "ADMIN" &&
+      String(course.teacherId) !== String(teacherId)
+    ) {
+      return res.status(403).json({
+        message:
+          "Bạn chỉ được phép tạo bài thi cho môn học mình được phân công",
+      });
     }
 
     const exam = await Exam.create({
       courseId,
       title,
       description,
-      startTime: startTime,
-      endTime: endTime,
+      startTime: new Date(startTime),
+      endTime: new Date(endTime),
       isLockdown: !!isLockdown,
       status: "DRAFT",
     });
@@ -64,22 +96,30 @@ export const createExam = async (req: Request, res: Response) => {
     res.status(201).json(exam);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
-// UPLOAD QUESTIONS
 export const uploadQuestions = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { questions } = req.body;
 
     const exam = await Exam.findByPk(id);
-    if (!exam) return res.status(404).json({ message: "Not found" });
 
-    await ExamQuestion.destroy({ where: { examId: id } });
+    if (!exam) {
+      return res.status(404).json({
+        message: "Exam not found",
+      });
+    }
 
-    const data = questions.map((q: any) => ({
+    await ExamQuestion.destroy({
+      where: { examId: id },
+    });
+
+    const questionsToInsert = questions.map((q: any) => ({
       examId: id,
       type: q.type,
       content: q.content,
@@ -88,35 +128,42 @@ export const uploadQuestions = async (req: Request, res: Response) => {
       points: q.points || 1,
     }));
 
-    await ExamQuestion.bulkCreate(data);
+    await ExamQuestion.bulkCreate(questionsToInsert);
 
-    res.json({ message: "OK" });
+    res.json({
+      message: "Questions uploaded successfully",
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
-
-// PUBLISH EXAM
 
 export const publishExam = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const { status } = req.body;
 
     const exam = await Exam.findByPk(id);
 
     if (!exam) {
-      return res.status(404).json({ message: "Not found" });
+      return res.status(404).json({
+        message: "Exam not found",
+      });
     }
 
-    exam.status = "PUBLISHED";
+    exam.status = status || "PUBLISHED";
 
     await exam.save();
 
     res.json(exam);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
@@ -133,7 +180,7 @@ export const autoCompleteExams = async () => {
             [Op.lt]: new Date(),
           },
         },
-      },
+      }
     );
 
     console.log("Auto completed expired exams");
@@ -141,12 +188,34 @@ export const autoCompleteExams = async () => {
     console.error("Auto complete exams error:", error);
   }
 };
-// GET STUDENT EXAMS
+
 export const getStudentExams = async (req: Request, res: Response) => {
   try {
-    await autoCompleteExams();
-
     const studentId = Number((req as any).user?.id);
+
+    const user = await User.findByPk(studentId);
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    let courseFilter: any = {};
+
+    if (user.classId) {
+      const courses = await Course.findAll({
+        where: {
+          classId: user.classId,
+        },
+      });
+
+      courseFilter = {
+        id: {
+          [Op.in]: courses.map((c) => c.id),
+        },
+      };
+    }
 
     const exams = await Exam.findAll({
       where: {
@@ -155,7 +224,12 @@ export const getStudentExams = async (req: Request, res: Response) => {
         },
       },
       include: [
-        { model: Course, as: "course", attributes: ["id", "name", "code"] },
+        {
+          model: Course,
+          as: "course",
+          attributes: ["id", "name", "code"],
+          where: courseFilter,
+        },
         {
           model: ExamSubmission,
           as: "submissions",
@@ -169,53 +243,170 @@ export const getStudentExams = async (req: Request, res: Response) => {
     res.json(exams);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
-// GET EXAM FOR STUDENT
-export const getExamForStudent = async (req: Request, res: Response) => {
+// ================= GET EXAM FOR STUDENT =================
+export const getExamForStudent = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    await autoCompleteExams();
-
     const { id } = req.params;
+
+    const studentId = (req as any).user?.id;
+
+    const user = await User.findByPk(studentId);
 
     const exam = await Exam.findByPk(id, {
       include: [
         {
+          model: Course,
+          as: "course",
+        },
+        {
           model: ExamQuestion,
           as: "questions",
-          attributes: ["id", "type", "content", "options", "points"],
+          attributes: [
+            "id",
+            "type",
+            "content",
+            "options",
+            "points",
+          ],
         },
       ],
     });
 
-    if (!exam) return res.status(404).json({ message: "Not found" });
+    if (!exam) {
+      return res.status(404).json({
+        message: "Exam not found",
+      });
+    }
+
+    if (user && user.classId !== (exam as any).course?.classId) {
+      return res.status(403).json({
+        message: "Bạn không có quyền truy cập bài thi này",
+      });
+    }
 
     res.json(exam);
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    console.error(error);
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
-// SUBMIT EXAM
+export const getExamResultForStudent = async (
+  req: Request,
+  res: Response
+) => {
+  try {
+    const { id } = req.params;
+
+    const studentId = (req as any).user?.id;
+
+    const submission = await ExamSubmission.findOne({
+      where: {
+        examId: id,
+        studentId,
+      },
+    });
+
+    if (!submission) {
+      return res.status(404).json({
+        message: "Submission not found",
+      });
+    }
+
+    if (submission.status !== "GRADED") {
+      return res.status(403).json({
+        message: "Kết quả chưa được công bố",
+      });
+    }
+
+    const exam = await Exam.findByPk(id, {
+      include: [
+        {
+          model: Course,
+          as: "course",
+        },
+        {
+          model: ExamQuestion,
+          as: "questions",
+          attributes: [
+            "id",
+            "type",
+            "content",
+            "options",
+            "points",
+            "correctAnswer",
+          ],
+        },
+      ],
+    });
+
+    res.json({
+      exam,
+      submission,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: "Server Error",
+    });
+  }
+};
+
 export const submitExam = async (req: Request, res: Response) => {
   try {
-    await autoCompleteExams();
     const { id } = req.params;
-    const { answers, cheatingAttempts = 0 } = req.body;
+
+    const {
+      answers,
+      cheatingAttempts = 0,
+    } = req.body;
 
     const studentId = Number((req as any).user?.id);
 
     const exam = await Exam.findByPk(id, {
-      include: [{ model: ExamQuestion, as: "questions" }],
+      include: [
+        {
+          model: Course,
+          as: "course",
+        },
+        {
+          model: ExamQuestion,
+          as: "questions",
+        },
+      ],
     });
 
-    if (!exam) return res.status(404).json({ message: "Not found" });
-    
-    if (exam.status === "COMPLETED") {
+    if (!exam) {
+      return res.status(404).json({
+        message: "Exam not found",
+      });
+    }
+
+    if ((exam as any).status === "COMPLETED") {
       return res.status(400).json({
         message: "Bài thi đã kết thúc",
+      });
+    }
+
+    const user = await User.findByPk(studentId);
+
+    if (
+      user &&
+      user.classId !== (exam as any).course?.classId
+    ) {
+      return res.status(403).json({
+        message: "Bạn không có quyền truy cập bài thi này",
       });
     }
 
@@ -224,22 +415,46 @@ export const submitExam = async (req: Request, res: Response) => {
     let autoScore = 0;
     let hasEssay = false;
 
+    const totalPointsConfigured = questions.reduce(
+      (sum, q) => sum + (q.points || 0),
+      0
+    );
+
+    const pointScale =
+      totalPointsConfigured > 0
+        ? 100 / totalPointsConfigured
+        : 1;
+
     questions.forEach((q) => {
       if (q.type === "MULTIPLE_CHOICE") {
-        if (answers?.[q.id] === q.correctAnswer) {
-          autoScore += q.points;
+        const studentAnswer = answers?.[q.id];
+
+        if (
+          studentAnswer &&
+          studentAnswer === q.correctAnswer
+        ) {
+          autoScore += q.points * pointScale;
         }
       } else {
         hasEssay = true;
       }
     });
 
+    const cheatingPenalty = cheatingAttempts * 5;
+
+    let finalScore = autoScore - cheatingPenalty;
+
+    if (finalScore < 0) finalScore = 0;
+    if (finalScore > 100) finalScore = 100;
+
     const submission = await ExamSubmission.create({
       examId: Number(id),
       studentId,
       answers,
       cheatingAttempts,
-      score: hasEssay ? null : autoScore,
+      score: hasEssay
+        ? null
+        : parseFloat(finalScore.toFixed(2)),
       status: hasEssay ? "PENDING" : "GRADED",
       submittedAt: new Date(),
     });
@@ -247,50 +462,87 @@ export const submitExam = async (req: Request, res: Response) => {
     res.status(201).json(submission);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: "Server Error" });
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
-// GET SUBMISSIONS
-export const getSubmissions = async (req: Request, res: Response) => {
+export const getSubmissions = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { id } = req.params;
 
     const submissions = await ExamSubmission.findAll({
-      where: { examId: id },
+      where: {
+        examId: id,
+      },
       include: [
-        { model: User, as: "student", attributes: ["id", "name", "username"] },
+        {
+          model: User,
+          as: "student",
+          attributes: ["id", "name", "username"],
+        },
       ],
     });
 
     const exam = await Exam.findByPk(id, {
-      include: [{ model: ExamQuestion, as: "questions" }],
+      include: [
+        {
+          model: ExamQuestion,
+          as: "questions",
+        },
+      ],
     });
 
     res.json({
       submissions,
-      questions: (exam as any)?.questions || [],
+      questions: exam ? (exam as any).questions : [],
     });
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    console.error(error);
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
 
-// GRADE SUBMISSION
-export const gradeSubmission = async (req: Request, res: Response) => {
+export const gradeSubmission = async (
+  req: Request,
+  res: Response
+) => {
   try {
     const { submissionId } = req.params;
-    const { score } = req.body;
+    const { score, gradingDetails } = req.body;
 
-    const submission = await ExamSubmission.findByPk(submissionId);
-    if (!submission) return res.status(404).json({ message: "Not found" });
+    const submission = await ExamSubmission.findByPk(
+      submissionId
+    );
+
+    if (!submission) {
+      return res.status(404).json({
+        message: "Not found",
+      });
+    }
 
     submission.score = score;
+
+    if (gradingDetails) {
+      submission.gradingDetails = gradingDetails;
+    }
+
     submission.status = "GRADED";
+
     await submission.save();
 
     res.json(submission);
   } catch (error) {
-    res.status(500).json({ message: "Server Error" });
+    console.error(error);
+    res.status(500).json({
+      message: "Server Error",
+    });
   }
 };
+

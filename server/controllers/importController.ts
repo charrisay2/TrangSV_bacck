@@ -1,23 +1,24 @@
-import { Request, Response } from 'express';
-import User from '../models/User';
-import Course from '../models/Course';
-import Curriculum from '../models/Curriculum';
-import Major from '../models/Major';
-import Department from '../models/Department';
-import Class from '../models/Class';
-import Subject from '../models/Subject';
-import bcrypt from 'bcryptjs';
-import { Op } from 'sequelize';
+import { Request, Response } from "express";
+import User from "../models/User";
+import Course from "../models/Course";
+import Curriculum from "../models/Curriculum";
+import Major from "../models/Major";
+import Department from "../models/Department";
+import Class from "../models/Class";
+import Subject from "../models/Subject";
+import bcrypt from "bcryptjs";
+import { Op } from "sequelize";
 
 export const importUsers = async (req: Request, res: Response) => {
   try {
     const { data } = req.body;
-    if (!Array.isArray(data)) return res.status(400).json({ message: 'Invalid data format' });
+    if (!Array.isArray(data))
+      return res.status(400).json({ message: "Invalid data format" });
 
     let importedCount = 0;
     for (const item of data) {
       if (!item.name || !item.role) continue;
-      
+
       let majorId = item.majorId;
       if (!majorId && item.majorName) {
         const major = await Major.findOne({ where: { name: item.majorName } });
@@ -26,7 +27,9 @@ export const importUsers = async (req: Request, res: Response) => {
 
       let departmentId = item.departmentId;
       if (!departmentId && item.departmentName) {
-        const dept = await Department.findOne({ where: { name: item.departmentName } });
+        const dept = await Department.findOne({
+          where: { name: item.departmentName },
+        });
         if (dept) departmentId = dept.id;
       }
 
@@ -37,35 +40,38 @@ export const importUsers = async (req: Request, res: Response) => {
       }
 
       let username = item.username;
-      
+
       if (!username) {
-        if (item.role === 'STUDENT') {
+        if (item.role === "STUDENT") {
           let yearPrefix = new Date().getFullYear().toString().slice(-2);
           if (classId) {
-             const studentClass = await Class.findByPk(classId);
-             if (studentClass && studentClass.cohort) {
-                 const match = studentClass.cohort.match(/\d+$/);
-                 if (match) yearPrefix = match[0].slice(-2);
-             }
+            const studentClass = await Class.findByPk(classId);
+            if (studentClass && studentClass.cohort) {
+              const match = studentClass.cohort.match(/\d+$/);
+              if (match) yearPrefix = match[0].slice(-2);
+            }
           }
-          
+
           const lastUser = await User.findOne({
-            where: { role: 'STUDENT', username: { [Op.like]: `${yearPrefix}%` } },
-            order: [['username', 'DESC']]
+            where: {
+              role: "STUDENT",
+              username: { [Op.like]: `${yearPrefix}%` },
+            },
+            order: [["username", "DESC"]],
           });
-          
+
           let counter = 1;
           if (lastUser && lastUser.username) {
-              const lastCounter = parseInt(lastUser.username.slice(2));
-              if (!isNaN(lastCounter)) {
-                  counter = lastCounter + 1;
-              }
+            const lastCounter = parseInt(lastUser.username.slice(2));
+            if (!isNaN(lastCounter)) {
+              counter = lastCounter + 1;
+            }
           }
-          username = `${yearPrefix}${counter.toString().padStart(4, '0')}`;
-        } else if (item.role === 'TEACHER') {
+          username = `${yearPrefix}${counter.toString().padStart(4, "0")}`;
+        } else if (item.role === "TEACHER") {
           const lastTeacher = await User.findOne({
-            where: { role: 'TEACHER', username: { [Op.like]: `GV%` } },
-            order: [['username', 'DESC']]
+            where: { role: "TEACHER", username: { [Op.like]: `GV%` } },
+            order: [["username", "DESC"]],
           });
           let counter = 1;
           if (lastTeacher && lastTeacher.username) {
@@ -74,20 +80,20 @@ export const importUsers = async (req: Request, res: Response) => {
               counter = lastCounter + 1;
             }
           }
-          username = `GV${counter.toString().padStart(4, '0')}`;
+          username = `GV${counter.toString().padStart(4, "0")}`;
         } else {
-            const lastAdmin = await User.findOne({
-              where: { role: 'ADMIN', username: { [Op.like]: `AD%` } },
-              order: [['username', 'DESC']]
-            });
-            let counter = 1;
-            if (lastAdmin && lastAdmin.username) {
-              const lastCounter = parseInt(lastAdmin.username.slice(2));
-              if (!isNaN(lastCounter)) {
-                counter = lastCounter + 1;
-              }
+          const lastAdmin = await User.findOne({
+            where: { role: "ADMIN", username: { [Op.like]: `AD%` } },
+            order: [["username", "DESC"]],
+          });
+          let counter = 1;
+          if (lastAdmin && lastAdmin.username) {
+            const lastCounter = parseInt(lastAdmin.username.slice(2));
+            if (!isNaN(lastCounter)) {
+              counter = lastCounter + 1;
             }
-            username = `AD${counter.toString().padStart(4, '0')}`;
+          }
+          username = `AD${counter.toString().padStart(4, "0")}`;
         }
       }
 
@@ -96,9 +102,19 @@ export const importUsers = async (req: Request, res: Response) => {
 
       let email = item.email;
       if (!email) {
-          email = `${username}@uni.edu.vn`;
+        email = `${username}@uni.edu.vn`;
       }
+      let courseId = item.courseId;
 
+      if (!courseId && item.courseCode) {
+        const course = await Course.findOne({
+          where: { code: item.courseCode }
+        });
+
+        if (course) {
+          courseId = course.id;
+        }
+      }
       await User.create({
         username: username,
         password: item.password ? item.password.toString() : '123',
@@ -110,28 +126,27 @@ export const importUsers = async (req: Request, res: Response) => {
         majorId,
         departmentId,
         classId,
+        courseId,
         status: 'ACTIVE',
-   
       });
-      importedCount++;
     }
-
     res.json({ message: `Imported ${importedCount} users successfully` });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error during import' });
+    res.status(500).json({ message: "Server error during import" });
   }
 };
 
 export const importCourses = async (req: Request, res: Response) => {
   try {
     const { data } = req.body;
-    if (!Array.isArray(data)) return res.status(400).json({ message: 'Invalid data format' });
+    if (!Array.isArray(data))
+      return res.status(400).json({ message: "Invalid data format" });
 
     let importedCount = 0;
     for (const item of data) {
       if (!item.name || !item.code) continue;
-      
+
       const existing = await Course.findOne({ where: { code: item.code } });
       if (existing) continue;
 
@@ -140,7 +155,7 @@ export const importCourses = async (req: Request, res: Response) => {
         const query: any = {};
         if (item.teacherEmail) query.email = item.teacherEmail;
         else query.username = item.teacherUsername;
-        
+
         const teacher = await User.findOne({ where: query });
         if (teacher) teacherId = teacher.id;
       }
@@ -159,14 +174,14 @@ export const importCourses = async (req: Request, res: Response) => {
         if (cls) classId = cls.id;
       }
 
-        await Course.create({
+      await Course.create({
         name: item.name,
         code: item.code,
         teacherId: item.teacherId,
         credits: item.credits || 3,
         majorId: item.majorId || null,
-        schedule: item.schedule || 'Thứ Hai (07:00 - 09:30)',
-        type: item.type || 'Standard'
+        schedule: item.schedule || "Thứ Hai (07:00 - 09:30)",
+        type: item.type || "Standard",
       });
       importedCount++;
     }
@@ -174,21 +189,22 @@ export const importCourses = async (req: Request, res: Response) => {
     res.json({ message: `Imported ${importedCount} courses successfully` });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error during import' });
+    res.status(500).json({ message: "Server error during import" });
   }
 };
 
 export const importSubjects = async (req: Request, res: Response) => {
   try {
     const { data } = req.body;
-    if (!Array.isArray(data)) return res.status(400).json({ message: 'Invalid data format' });
+    if (!Array.isArray(data))
+      return res.status(400).json({ message: "Invalid data format" });
 
     let importedCount = 0;
     for (const item of data) {
       if (!item.name) continue;
 
       let majorId = item.majorId;
-      let majorCode = 'SUB';
+      let majorCode = "SUB";
       if (!majorId && item.majorName) {
         const major = await Major.findOne({ where: { name: item.majorName } });
         if (major) {
@@ -204,9 +220,9 @@ export const importSubjects = async (req: Request, res: Response) => {
         // Find highest existing subject code for this major
         const lastSubject = await Subject.findOne({
           where: { majorId },
-          order: [['code', 'DESC']]
+          order: [["code", "DESC"]],
         });
-        
+
         let startCounter = 1;
         if (lastSubject && lastSubject.code) {
           const match = lastSubject.code.match(/\d+$/);
@@ -214,7 +230,7 @@ export const importSubjects = async (req: Request, res: Response) => {
             startCounter = parseInt(match[0]) + 1;
           }
         }
-        code = `${majorCode}${String(startCounter).padStart(3, '0')}`;
+        code = `${majorCode}${String(startCounter).padStart(3, "0")}`;
       }
 
       const existingSubject = await Subject.findOne({ where: { code } });
@@ -229,15 +245,15 @@ export const importSubjects = async (req: Request, res: Response) => {
         semesterNumber: item.semesterNumber || 1,
         totalPeriods: item.totalPeriods || 45,
         weeks: item.weeks || 10,
-        majorId: majorId
+        majorId: majorId,
       });
-      
+
       // Auto-assign to Curriculum if requested or by default
-      const Curriculum = (await import('../models/Curriculum')).default;
+      const Curriculum = (await import("../models/Curriculum")).default;
       await Curriculum.create({
         majorId: majorId,
         subjectId: newSubject.id,
-        semesterNumber: item.semesterNumber || 1
+        semesterNumber: item.semesterNumber || 1,
       });
 
       importedCount++;
@@ -246,14 +262,15 @@ export const importSubjects = async (req: Request, res: Response) => {
     res.json({ message: `Imported ${importedCount} subjects successfully` });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error during import' });
+    res.status(500).json({ message: "Server error during import" });
   }
 };
 
 export const importCurriculum = async (req: Request, res: Response) => {
   try {
     const { data } = req.body;
-    if (!Array.isArray(data)) return res.status(400).json({ message: 'Invalid data format' });
+    if (!Array.isArray(data))
+      return res.status(400).json({ message: "Invalid data format" });
 
     let importedCount = 0;
     for (const item of data) {
@@ -270,7 +287,7 @@ export const importCurriculum = async (req: Request, res: Response) => {
         const query: any = {};
         if (item.subjectCode) query.code = item.subjectCode;
         else query.name = item.subjectName;
-        
+
         const subject = await Subject.findOne({ where: query });
         if (subject) subjectId = subject.id;
       }
@@ -280,14 +297,16 @@ export const importCurriculum = async (req: Request, res: Response) => {
       await Curriculum.create({
         majorId,
         subjectId,
-        semesterNumber: item.semesterNumber
+        semesterNumber: item.semesterNumber,
       });
       importedCount++;
     }
 
-    res.json({ message: `Imported ${importedCount} curriculum rows successfully` });
+    res.json({
+      message: `Imported ${importedCount} curriculum rows successfully`,
+    });
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error during import' });
+    res.status(500).json({ message: "Server error during import" });
   }
 };

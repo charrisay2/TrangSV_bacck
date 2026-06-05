@@ -1,31 +1,32 @@
-import { DataTypes, Model, Optional } from "sequelize";
-import sequelize from "../config/database";
-import Exam from "./Exam";
-import User from "./User";
+import { DataTypes, Model, Optional } from 'sequelize';
+import sequelize from '../config/database';
+
+import Exam from './Exam';
+import User from './User';
 
 interface ExamSubmissionAttributes {
   id: number;
-
   examId: number;
   studentId: number;
-
   answers: any;
-
-  score: number | null;
-
-  cheatingAttempts: number;
-
-  status: "PENDING" | "GRADED";
-
+  gradingDetails?: any | null;
+  score?: number | null;
+  cheatingAttempts?: number;
+  status: 'PENDING' | 'GRADED';
   submittedAt: Date;
 }
 
 interface ExamSubmissionCreationAttributes
   extends Optional<
     ExamSubmissionAttributes,
-    "id" | "score" | "cheatingAttempts" | "status" | "submittedAt"
+    | 'id'
+    | 'gradingDetails'
+    | 'score'
+    | 'cheatingAttempts'
+    | 'status'
+    | 'submittedAt'
   > {}
-// cập nhật lại cái dữ liệu lên class diagram 
+
 class ExamSubmission
   extends Model<
     ExamSubmissionAttributes,
@@ -36,15 +37,18 @@ class ExamSubmission
   public id!: number;
 
   public examId!: number;
+
   public studentId!: number;
 
   public answers!: any;
+
+  public gradingDetails!: any | null;
 
   public score!: number | null;
 
   public cheatingAttempts!: number;
 
-  public status!: "PENDING" | "GRADED";
+  public status!: 'PENDING' | 'GRADED';
 
   public submittedAt!: Date;
 
@@ -63,17 +67,32 @@ ExamSubmission.init(
     examId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: 'exams',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
     },
 
     studentId: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      references: {
+        model: 'Users',
+        key: 'id',
+      },
+      onDelete: 'CASCADE',
     },
 
     answers: {
       type: DataTypes.JSON,
       allowNull: false,
-      defaultValue: {},
+    },
+
+    gradingDetails: {
+      type: DataTypes.JSON,
+      allowNull: true,
+      defaultValue: null,
     },
 
     score: {
@@ -89,9 +108,12 @@ ExamSubmission.init(
     },
 
     status: {
-      type: DataTypes.ENUM("PENDING", "GRADED"),
+      type: DataTypes.ENUM(
+        'PENDING',
+        'GRADED'
+      ),
       allowNull: false,
-      defaultValue: "PENDING",
+      defaultValue: 'PENDING',
     },
 
     submittedAt: {
@@ -102,29 +124,39 @@ ExamSubmission.init(
   },
   {
     sequelize,
-    tableName: "exam_submissions",
+    modelName: 'ExamSubmission',
+
+    tableName: 'exam_submissions',
+
+    timestamps: true,
+
+    indexes: [
+      {
+        unique: true,
+        fields: ['examId', 'studentId'],
+      },
+    ],
   }
 );
 
-// RELATIONS
 Exam.hasMany(ExamSubmission, {
-  foreignKey: "examId",
-  as: "submissions",
+  foreignKey: 'examId',
+  as: 'submissions',
 });
 
 ExamSubmission.belongsTo(Exam, {
-  foreignKey: "examId",
-  as: "exam",
+  foreignKey: 'examId',
+  as: 'exam',
 });
 
 User.hasMany(ExamSubmission, {
-  foreignKey: "studentId",
-  as: "examSubmissions",
+  foreignKey: 'studentId',
+  as: 'examSubmissions',
 });
 
 ExamSubmission.belongsTo(User, {
-  foreignKey: "studentId",
-  as: "student",
+  foreignKey: 'studentId',
+  as: 'student',
 });
 
 export default ExamSubmission;

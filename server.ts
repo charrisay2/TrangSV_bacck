@@ -65,11 +65,11 @@ const httpServer = createServer(app);
 const io = new SocketIOServer(httpServer, {
   cors: { 
     origin: [
-      "http://localhost:5173",
       "https://trangsv.congsinhvieen.id.vn",
+      "http://192.168.20.83:5173",
     ] 
   }
-});
+});   
 
 // Make io accessible to routes
 app.set('io', io);
@@ -85,8 +85,8 @@ const PORT = Number(process.env.PORT) || 3001;
 app.use(
   cors({
     origin: [
-      "http://localhost:5173",
       "https://trangsv.congsinhvieen.id.vn",
+      "http://192.168.20.83:5173",
     ],
     credentials: true,
   })

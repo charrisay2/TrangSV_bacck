@@ -5,19 +5,13 @@ import Class from './Class';
 
 interface RequestAttributes {
   id: number;
-
   type: 'STUDENT_LEAVE' | 'TEACHER_SUBSTITUTE';
-
   requesterId: number;
-
   targetClassId?: number | null;
-
   substituteTeacherId?: number | null;
-
   reason: string;
-
   attachmentUrl?: string | null;
-
+  reviewNote?: string | null;
   status: 'PENDING' | 'APPROVED' | 'REJECTED';
 }
 
@@ -25,10 +19,11 @@ interface RequestCreationAttributes
   extends Optional<
     RequestAttributes,
     | 'id'
+    | 'status'
     | 'targetClassId'
     | 'substituteTeacherId'
     | 'attachmentUrl'
-    | 'status'
+    | 'reviewNote'
   > {}
 
 class Request
@@ -41,13 +36,15 @@ class Request
 
   public requesterId!: number;
 
-  public targetClassId?: number | null;
+  public targetClassId!: number | null;
 
-  public substituteTeacherId?: number | null;
+  public substituteTeacherId!: number | null;
 
   public reason!: string;
 
-  public attachmentUrl?: string | null;
+  public attachmentUrl!: string | null;
+
+  public reviewNote!: string | null;
 
   public status!: 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -111,6 +108,12 @@ Request.init(
       allowNull: true,
     },
 
+    reviewNote: {
+      type: DataTypes.TEXT,
+      allowNull: true,
+      defaultValue: null,
+    },
+
     status: {
       type: DataTypes.ENUM(
         'PENDING',
@@ -123,7 +126,9 @@ Request.init(
   },
   {
     sequelize,
+    modelName: 'Request',
     tableName: 'requests',
+    timestamps: true,
   }
 );
 

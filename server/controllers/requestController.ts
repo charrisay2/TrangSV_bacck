@@ -8,7 +8,7 @@ export const createRequest = async (req: Request, res: Response) => {
   try {
     const { type, targetClassId, substituteTeacherId, reason, attachmentUrl } = req.body;
     // @ts-ignore
-    const requesterId = (req as any).user?.id;
+       const requesterId = (req as any).user?.id;
 
     const newRequest = await RequestModel.create({
       type,
@@ -66,16 +66,19 @@ export const getRequests = async (req: Request, res: Response) => {
 export const updateRequestStatus = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const { status } = req.body; // 'APPROVED' or 'REJECTED'
+    const { status, reviewNote } = req.body; // 'APPROVED' or 'REJECTED'
 
     const userRequest = await RequestModel.findByPk(id);
     if (!userRequest) return res.status(404).json({ message: 'Không tìm thấy đơn.' });
 
     userRequest.status = status;
+    if (reviewNote !== undefined) {
+      userRequest.reviewNote = reviewNote;
+    }
     await userRequest.save();
 
     await Notification.create({
-      message: `Đơn của bạn đã được ${status === 'APPROVED' ? 'chấp nhận' : 'từ chối'}`,
+      message: `Đơn của bạn đã được ${status === 'APPROVED' ? 'chấp nhận' : 'từ chối'}${reviewNote ? ` với lời nhắn: ${reviewNote}` : ''}`,
       type: 'SYSTEM',
       targetRole: userRequest.type === 'STUDENT_LEAVE' ? 'STUDENT' : 'TEACHER',
       targetUserId: userRequest.requesterId,

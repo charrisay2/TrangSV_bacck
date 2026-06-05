@@ -2,7 +2,7 @@ import express from 'express';
 import { 
   getTeacherExams, createExam, uploadQuestions, publishExam, 
   getStudentExams, getExamForStudent, submitExam, 
-  getSubmissions, gradeSubmission 
+  getSubmissions, gradeSubmission,getExamResultForStudent
 } from '../controllers/examController';
 import { protect, authorize } from '../middleware/authMiddleware';
 
@@ -15,6 +15,7 @@ router.put('/:id/publish', protect, authorize('TEACHER'), publishExam);
 
 router.get('/student', protect, authorize('STUDENT'), getStudentExams);
 router.get('/:id/take', protect, authorize('STUDENT'), getExamForStudent);
+router.get('/:id/result', protect, authorize('STUDENT'), getExamResultForStudent);
 router.post('/:id/submit', protect, authorize('STUDENT'), submitExam);
 
 router.get('/:id/submissions', protect, authorize('TEACHER'), getSubmissions);
