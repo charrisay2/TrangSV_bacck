@@ -6,6 +6,7 @@ export interface GradeAttributes {
   id: number;
   studentId: number;
   courseId: number;
+  processScore: number;
   midterm: number;
   final: number;
   semester: string;
@@ -17,6 +18,7 @@ export class Grade extends Model<GradeAttributes, GradeCreationAttributes> imple
   public id!: number;
   public studentId!: number;
   public courseId!: number;
+  public processScore!: number;
   public midterm!: number;
   public final!: number;
   public semester!: string;
@@ -40,6 +42,11 @@ Grade.init(
       type: DataTypes.INTEGER,
       allowNull: false,
     },
+    processScore: {
+      type: DataTypes.FLOAT,
+      allowNull: false,
+      defaultValue: 0,
+    },
     midterm: {
       type: DataTypes.FLOAT,
       allowNull: false,
@@ -58,13 +65,16 @@ Grade.init(
   {
     sequelize,
     modelName: 'Grade',
-    tableName: 'grades',
+    tableName: 'Grades',
   }
-
-  
 );
+
+
+
 Grade.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 User.hasMany(Grade, { foreignKey: 'studentId', as: 'grades' });
 
 Grade.belongsTo(Course, { foreignKey: 'courseId', as: 'course' });
 Course.hasMany(Grade, { foreignKey: 'courseId', as: 'grades' });
+
+export default Grade;

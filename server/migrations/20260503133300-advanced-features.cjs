@@ -3,65 +3,65 @@
 /** @type {import('sequelize-cli').Migration} */
 module.exports = {
   async up(queryInterface, Sequelize) {
- await queryInterface.createTable("requests", {
-  id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
+    await queryInterface.createTable("requests", {
+      id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
 
-  type: {
-    type: Sequelize.ENUM("STUDENT_LEAVE", "TEACHER_SUBSTITUTE"),
-    allowNull: false,
-  },
+      type: {
+        type: Sequelize.ENUM("STUDENT_LEAVE", "TEACHER_SUBSTITUTE"),
+        allowNull: false,
+      },
 
-  requesterId: {
-    type: Sequelize.INTEGER,
-    references: { model: "Users", key: "id" },
-    onUpdate: "CASCADE",
-    onDelete: "CASCADE",
-  },
+      requesterId: {
+        type: Sequelize.INTEGER,
+        references: { model: "Users", key: "id" },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      },
 
-  targetClassId: {
-    type: Sequelize.INTEGER,
-    references: { model: "Classes", key: "id" },
-    onUpdate: "CASCADE",
-    onDelete: "SET NULL",
-  },
+      targetClassId: {
+        type: Sequelize.INTEGER,
+        references: { model: "Classes", key: "id" },
+        onUpdate: "CASCADE",
+        onDelete: "SET NULL",
+      },
 
-  substituteTeacherId: {
-    type: Sequelize.INTEGER,
-    references: { model: "Users", key: "id" },
-    onUpdate: "CASCADE",
-    onDelete: "SET NULL",
-  },
+      substituteTeacherId: {
+        type: Sequelize.INTEGER,
+        references: { model: "Users", key: "id" },
+        onUpdate: "CASCADE",
+        onDelete: "SET NULL",
+      },
 
-  reason: {
-    type: Sequelize.TEXT,
-    allowNull: false,
-  },
+      reason: {
+        type: Sequelize.TEXT,
+        allowNull: false,
+      },
 
-  attachmentUrl: {
-    type: Sequelize.STRING,
-    allowNull: true,
-  },
+      attachmentUrl: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
 
-  reviewNote: {
-    type: Sequelize.TEXT,
-    allowNull: true,
-  },
+      reviewNote: {
+        type: Sequelize.TEXT,
+        allowNull: true,
+      },
 
-  status: {
-    type: Sequelize.ENUM("PENDING", "APPROVED", "REJECTED"),
-    defaultValue: "PENDING",
-  },
+      status: {
+        type: Sequelize.ENUM("PENDING", "APPROVED", "REJECTED"),
+        defaultValue: "PENDING",
+      },
 
-  createdAt: {
-    type: Sequelize.DATE,
-    allowNull: false,
-  },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
 
-  updatedAt: {
-    type: Sequelize.DATE,
-    allowNull: false,
-  },
-});
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+      },
+    });
 
     await queryInterface.createTable("warnings", {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
@@ -129,72 +129,72 @@ module.exports = {
       updatedAt: { type: Sequelize.DATE, allowNull: false },
     });
 
-   await queryInterface.createTable("exam_submissions", {
-  id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
+    await queryInterface.createTable("exam_submissions", {
+      id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
 
-  examId: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    references: { model: "exams", key: "id" },
-    onUpdate: "CASCADE",
-    onDelete: "CASCADE",
-  },
+      examId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: "exams", key: "id" },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      },
 
-  studentId: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    references: { model: "Users", key: "id" },
-    onUpdate: "CASCADE",
-    onDelete: "CASCADE",
-  },
+      studentId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: { model: "Users", key: "id" },
+        onUpdate: "CASCADE",
+        onDelete: "CASCADE",
+      },
 
-  answers: {
-    type: Sequelize.JSON,
-    allowNull: false,
-    defaultValue: {},
-  },
+      answers: {
+        type: Sequelize.JSON,
+        allowNull: false,
+        defaultValue: {},
+      },
 
-  gradingDetails: {
-    type: Sequelize.JSON,
-    allowNull: true,
-  },
+      gradingDetails: {
+        type: Sequelize.JSON,
+        allowNull: true,
+      },
 
-  score: {
-    type: Sequelize.FLOAT,
-    allowNull: true,
-  },
+      score: {
+        type: Sequelize.FLOAT,
+        allowNull: true,
+      },
 
-  cheatingAttempts: {
-    type: Sequelize.INTEGER,
-    allowNull: false,
-    defaultValue: 0,
-  },
+      cheatingAttempts: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        defaultValue: 0,
+      },
 
-  status: {
-    type: Sequelize.ENUM("PENDING", "GRADED"),
-    allowNull: false,
-    defaultValue: "PENDING",
-  },
+      status: {
+        type: Sequelize.ENUM("PENDING", "GRADED"),
+        allowNull: false,
+        defaultValue: "PENDING",
+      },
 
-  submittedAt: {
-    type: Sequelize.DATE,
-    allowNull: false,
-    defaultValue: Sequelize.NOW,
-  },
+      submittedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
+      },
 
-  createdAt: {
-    type: Sequelize.DATE,
-    allowNull: false,
-    defaultValue: Sequelize.NOW,
-  },
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
+      },
 
-  updatedAt: {
-    type: Sequelize.DATE,
-    allowNull: false,
-    defaultValue: Sequelize.NOW,
-  },
-});
-
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.NOW,
+      },
+    });
+   
     await queryInterface.createTable("face_id_logs", {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
       studentId: {
@@ -222,6 +222,7 @@ module.exports = {
   },
 
   async down(queryInterface, Sequelize) {
+    await queryInterface.dropTable("question_banks");
     await queryInterface.dropTable("face_id_logs");
     await queryInterface.dropTable("exam_submissions");
     await queryInterface.dropTable("exam_questions");

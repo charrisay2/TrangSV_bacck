@@ -1,16 +1,24 @@
 import express from 'express';
 import { 
   getTeacherExams, createExam, uploadQuestions, publishExam, 
-  getStudentExams, getExamForStudent, submitExam, 
-  getSubmissions, gradeSubmission,getExamResultForStudent
+  getStudentExams, getExamForStudent, getExamResultForStudent, submitExam, 
+  getSubmissions, gradeSubmission,
+  getQuestionBank, addQuestionToBank, addQuestionsFromBank, deleteQuestionFromBank
+
 } from '../controllers/examController';
 import { protect, authorize } from '../middleware/authMiddleware';
-
+import { uploadQuestionsToBank } from '../controllers/examController';
 const router = express.Router();
+router.delete('/bank/:id',protect,authorize('TEACHER'),deleteQuestionFromBank);
+
+router.post('/bank/upload',protect,authorize('TEACHER'),uploadQuestionsToBank);
+router.get('/bank', protect, authorize('TEACHER'), getQuestionBank);
+router.post('/bank', protect, authorize('TEACHER'), addQuestionToBank);
 
 router.get('/teacher', protect, authorize('TEACHER'), getTeacherExams);
 router.post('/', protect, authorize('TEACHER'), createExam);
 router.post('/:id/questions', protect, authorize('TEACHER'), uploadQuestions);
+router.post('/:id/questions-from-bank', protect, authorize('TEACHER'), addQuestionsFromBank);
 router.put('/:id/publish', protect, authorize('TEACHER'), publishExam);
 
 router.get('/student', protect, authorize('STUDENT'), getStudentExams);

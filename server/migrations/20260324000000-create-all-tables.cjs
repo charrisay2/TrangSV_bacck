@@ -295,10 +295,13 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
-
     // 8. users
     await queryInterface.createTable("users", {
-      id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
+      id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
 
       username: {
         type: Sequelize.STRING,
@@ -344,7 +347,7 @@ module.exports = {
       },
 
       status: {
-        type: Sequelize.ENUM("ACTIVE", "RESERVED", "GRADUATED"),
+        type: Sequelize.ENUM("ACTIVE", "RESERVED", "GRADUATED", "INACTIVE"),
         allowNull: false,
         defaultValue: "ACTIVE",
       },
@@ -382,6 +385,12 @@ module.exports = {
           key: "id",
         },
         onDelete: "SET NULL",
+      },
+
+      mustChangePassword: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
       },
 
       createdAt: {
@@ -509,9 +518,17 @@ module.exports = {
       onDelete: "SET NULL",
     });
 
+    await queryInterface.addColumn("courses", "startDate", {
+      type: Sequelize.DATEONLY,
+      allowNull: true,
+    });
     // 10. attendances
     await queryInterface.createTable("attendances", {
-      id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
+      id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
 
       studentId: {
         type: Sequelize.INTEGER,
@@ -543,6 +560,30 @@ module.exports = {
         allowNull: false,
       },
 
+      // GPS lúc điểm danh
+      latitude: {
+        type: Sequelize.FLOAT,
+        allowNull: true,
+      },
+
+      longitude: {
+        type: Sequelize.FLOAT,
+        allowNull: true,
+      },
+
+      // Sinh viên đã rời khỏi lớp hay chưa
+      hasLeftClass: {
+        type: Sequelize.BOOLEAN,
+        allowNull: false,
+        defaultValue: false,
+      },
+
+      // Thời điểm rời lớp
+      leftClassAt: {
+        type: Sequelize.DATE,
+        allowNull: true,
+      },
+
       createdAt: {
         type: Sequelize.DATE,
         allowNull: false,
@@ -555,7 +596,6 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
-
     // 11. enrollments
     await queryInterface.createTable("enrollments", {
       id: { type: Sequelize.INTEGER, autoIncrement: true, primaryKey: true },
@@ -579,7 +619,10 @@ module.exports = {
         },
         onDelete: "CASCADE",
       },
-
+      startDate: {
+        type: Sequelize.DATEONLY,
+        allowNull: true,
+      },
       status: {
         type: Sequelize.ENUM("Enrolled", "Dropped", "Completed"),
         defaultValue: "Enrolled",
@@ -606,24 +649,57 @@ module.exports = {
         primaryKey: true,
       },
 
+      title: {
+        type: Sequelize.STRING,
+        allowNull: true,
+      },
+
       message: {
         type: Sequelize.STRING,
         allowNull: false,
       },
 
       type: {
-        type: Sequelize.ENUM("SYSTEM", "ATTENDANCE", "COURSE"),
+        type: Sequelize.ENUM(
+          "SYSTEM",
+          "CLASS_UPDATE",
+          "BROADCAST",
+          "FEE_REMINDER",
+          "WARNING",
+        ),
         allowNull: false,
         defaultValue: "SYSTEM",
       },
 
       targetRole: {
-        type: Sequelize.ENUM("ADMIN", "TEACHER", "STUDENT"),
+        type: Sequelize.ENUM("ALL", "ADMIN", "TEACHER", "STUDENT"),
         allowNull: false,
+        defaultValue: "ALL",
+      },
+
+      targetUserId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "CASCADE",
+      },
+
+      classId: {
+        type: Sequelize.INTEGER,
+        allowNull: true,
+        references: {
+          model: "classes",
+          key: "id",
+        },
+        onDelete: "SET NULL",
       },
 
       isRead: {
         type: Sequelize.BOOLEAN,
+        allowNull: false,
         defaultValue: false,
       },
 
@@ -639,9 +715,125 @@ module.exports = {
         defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
       },
     });
+    // 13. invoices
+    await queryInterface.createTable("invoices", {
+      id: {
+        type: Sequelize.INTEGER,
+        autoIncrement: true,
+        primaryKey: true,
+      },
+
+      studentId: {
+        type: Sequelize.INTEGER,
+        allowNull: false,
+        references: {
+          model: "users",
+          key: "id",
+        },
+        onDelete: "CASCADE",
+      },
+
+      title: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+
+      amount: {
+        type: Sequelize.FLOAT,
+        allowNull: false,
+      },
+
+      dueDate: {
+        type: Sequelize.STRING,
+        allowNull: false,
+      },
+
+      status: {
+        type: Sequelize.ENUM("Paid", "Unpaid"),
+        allowNull: false,
+        defaultValue: "Unpaid",
+      },
+
+      createdAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+      },
+
+      updatedAt: {
+        type: Sequelize.DATE,
+        allowNull: false,
+        defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+      },
+    });
+    // 14. grades
+await queryInterface.createTable("grades", {
+  id: {
+    type: Sequelize.INTEGER,
+    autoIncrement: true,
+    primaryKey: true,
+  },
+
+  studentId: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    references: {
+      model: "users",
+      key: "id",
+    },
+    onDelete: "CASCADE",
+  },
+
+  courseId: {
+    type: Sequelize.INTEGER,
+    allowNull: false,
+    references: {
+      model: "courses",
+      key: "id",
+    },
+    onDelete: "CASCADE",
+  },
+
+  processScore: {
+    type: Sequelize.FLOAT,
+    allowNull: false,
+    defaultValue: 0,
+  },
+
+  midterm: {
+    type: Sequelize.FLOAT,
+    allowNull: false,
+    defaultValue: 0,
+  },
+
+  final: {
+    type: Sequelize.FLOAT,
+    allowNull: false,
+    defaultValue: 0,
+  },
+
+  semester: {
+    type: Sequelize.STRING,
+    allowNull: false,
+  },
+
+  createdAt: {
+    type: Sequelize.DATE,
+    allowNull: false,
+    defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+  },
+
+  updatedAt: {
+    type: Sequelize.DATE,
+    allowNull: false,
+    defaultValue: Sequelize.literal("CURRENT_TIMESTAMP"),
+  },
+});
   },
 
   down: async (queryInterface, Sequelize) => {
+    await queryInterface.dropTable("grades");
+    await queryInterface.dropTable("invoices");
     await queryInterface.dropTable("notifications");
     await queryInterface.dropTable("enrollments");
     await queryInterface.dropTable("attendances");

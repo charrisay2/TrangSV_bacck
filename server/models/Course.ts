@@ -20,9 +20,11 @@ interface CourseAttributes {
   semesterId?: number;
   totalPeriods?: number;
   weeks?: number;
+  startDate?: Date; // Tích hợp từ file 2
+  endDate?: Date;   // Tích hợp từ file 2
 }
 
-interface CourseCreationAttributes extends Optional<CourseAttributes, 'id' | 'totalPeriods' | 'weeks'> {}
+interface CourseCreationAttributes extends Optional<CourseAttributes, 'id' | 'totalPeriods' | 'weeks' | 'startDate' | 'endDate'> {}
 
 class Course extends Model<CourseAttributes, CourseCreationAttributes> implements CourseAttributes {
   public id!: number;
@@ -38,7 +40,9 @@ class Course extends Model<CourseAttributes, CourseCreationAttributes> implement
   public semesterId!: number;
   public totalPeriods!: number;
   public weeks!: number;
-// một khóa học có thể óc nhiều hs và tương tự 
+  public startDate!: Date; // Tích hợp từ file 2
+ 
+  // một khóa học có thể óc nhiều hs và tương tự 
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -121,10 +125,14 @@ Course.init(
       allowNull: false,
       defaultValue: 10,
     },
+    startDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
   },
   {
     sequelize,
-    tableName: 'courses',
+    tableName: 'courses', // Bạn có thể đổi thành 'Courses' nếu cấu hình Database của bạn phân biệt chữ hoa chữ thường
     hooks: {
       afterCreate: async (course, options) => {
         const Notification = (await import('./Notification')).default;
@@ -157,13 +165,13 @@ Course.init(
           targetUserId: course.teacherId,
           isRead: false
         });
-        // Student notifications would ideally target enrolled students, but we don't have an enrollment table yet.
-        // For now, we'll just broadcast to all students for demo purposes or skip it.
+        
+        // Trộn logic tạo thông báo cho sinh viên từ cả 2 file để tương thích tuyệt đối
         await Notification.create({
           message: `Lịch học môn ${course.name} có thay đổi.`,
           type: 'CLASS_UPDATE',
           targetRole: 'STUDENT',
-          classId: course.id,
+          classId: course.id,       // Giữ nguyên thuộc tính của file 1
           isRead: false
         });
       },

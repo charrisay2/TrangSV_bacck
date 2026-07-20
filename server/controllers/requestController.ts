@@ -4,11 +4,52 @@ import User from '../models/User';
 import Class from '../models/Class';
 import Notification from '../models/Notification';
 
-export const createRequest = async (req: Request, res: Response) => {
+export const createRequest = async (
+  req: Request,
+  res: Response
+) => {
   try {
-    const { type, targetClassId, substituteTeacherId, reason, attachmentUrl } = req.body;
-    // @ts-ignore
-       const requesterId = (req as any).user?.id;
+    const {
+      type,
+      targetClassId,
+      substituteTeacherId,
+      reason,
+    } = req.body;
+
+    const requesterId = (req as any).user?.id;
+
+    if (!type) {
+      return res.status(400).json({
+        message: "Thiếu loại đơn"
+      });
+    }
+
+
+    if (!requesterId) {
+      return res.status(401).json({
+        message: "Không xác định người gửi"
+      });
+    }
+
+
+    if (!reason?.trim()) {
+      return res.status(400).json({
+        message: "Vui lòng nhập lý do"
+      });
+    }
+
+
+    if (!targetClassId) {
+      return res.status(400).json({
+        message: "Vui lòng nhập lớp học / học phần"
+      });
+    }
+
+    let attachmentUrl = null;
+
+    if (req.file) {
+      attachmentUrl = `/uploads/${req.file.filename}`;
+    }
 
     const newRequest = await RequestModel.create({
       type,
@@ -17,21 +58,22 @@ export const createRequest = async (req: Request, res: Response) => {
       substituteTeacherId,
       reason,
       attachmentUrl,
-      status: 'PENDING'
+      status: "PENDING",
     });
 
-    // Notify admins
     await Notification.create({
-      message: `Đơn từ mới: ${type === 'STUDENT_LEAVE' ? 'Xin phép nghỉ' : 'Báo bận/Dạy thay'}`,
-      type: 'SYSTEM',
-      targetRole: 'ADMIN',
-      isRead: false
+      message: `Đơn từ mới`,
+      type: "SYSTEM",
+      targetRole: "ADMIN",
+      isRead: false,
     });
 
     res.status(201).json(newRequest);
   } catch (error) {
     console.error(error);
-    res.status(500).json({ message: 'Server error' });
+    res.status(500).json({
+      message: "Server error",
+    });
   }
 };
 

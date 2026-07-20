@@ -28,6 +28,12 @@ export const createCurriculum = async (req: Request, res: Response) => {
   try {
     const { majorId, subjectId, semesterNumber } = req.body;
 
+    if (!majorId || !subjectId || !semesterNumber) {
+      return res.status(400).json({
+        message: "Vui lòng nhập đầy đủ thông tin chương trình đào tạo"
+      });
+    }
+
     const exists = await Curriculum.findOne({ where: { majorId, subjectId } });
     if (exists) {
       return res.status(400).json({ message: 'Subject already exists in this major curriculum' });

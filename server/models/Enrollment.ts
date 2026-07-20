@@ -5,26 +5,29 @@ import sequelize from "../config/database";
 
 import User from "./User";
 import Course from "./Course";
-
 interface EnrollmentAttributes {
   id: number;
   courseId: number;
   studentId: number;
+  startDate: string | null;
   status: "Enrolled" | "Dropped" | "Completed";
 }
 
 interface EnrollmentCreationAttributes
-  extends Optional<EnrollmentAttributes, "id" | "status"> {}
+  extends Optional<
+    EnrollmentAttributes,
+    "id" | "status" | "startDate"
+  > {}
 
 class Enrollment
   extends Model<EnrollmentAttributes, EnrollmentCreationAttributes>
   implements EnrollmentAttributes
 {
   public id!: number;
-  public courseId!: number;
-  public studentId!: number;
-  public status!: "Enrolled" | "Dropped" | "Completed";
-
+public courseId!: number;
+public studentId!: number;
+public startDate!: string;
+public status!: "Enrolled" | "Dropped" | "Completed";
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -56,13 +59,13 @@ Enrollment.init(
       },
       onDelete: "CASCADE",
     },
+    startDate: {
+      type: DataTypes.DATEONLY,
+      allowNull: true,
+    },
 
     status: {
-      type: DataTypes.ENUM(
-        "Enrolled",
-        "Dropped",
-        "Completed",
-      ),
+      type: DataTypes.ENUM("Enrolled", "Dropped", "Completed"),
       defaultValue: "Enrolled",
     },
   },

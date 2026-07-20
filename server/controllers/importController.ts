@@ -8,7 +8,56 @@ import Class from "../models/Class";
 import Subject from "../models/Subject";
 import bcrypt from "bcryptjs";
 import { Op } from "sequelize";
+import Enrollment from "../models/Enrollment";
 
+export const importEnrollments = async (req: Request, res: Response) => {
+  try {
+    const { data } = req.body;
+    if (!Array.isArray(data))
+      return res.status(400).json({ message: "Invalid data format" });
+
+    let importedCount = 0;
+    for (const item of data) {
+      const studentUsername =
+        item["Tên đăng nhập"]?.toString() || item.studentId?.toString();
+      const courseCode =
+        item["Mã lớp học phần"]?.toString() || item.courseId?.toString();
+
+      if (!studentUsername || !courseCode) continue;
+
+      const user = await User.findOne({
+        where: {
+          username: studentUsername,
+          role: "STUDENT",
+        },
+      });
+      const course = await Course.findOne({
+        where: {
+          [Op.or]: [{ id: parseInt(courseCode) || 0 }, { code: courseCode }],
+        },
+      });
+
+      if (!user || !course) continue;
+
+      const [enrollment, created] = await Enrollment.findOrCreate({
+        where: {
+          studentId: user.id,
+          courseId: course.id,
+        },
+        defaults: {
+          status: "Enrolled",
+        },
+      });
+
+      if (created) importedCount++;
+    }
+
+    res.json({ message: `Imported ${importedCount} enrollments successfully` });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error during import" });
+  }
+};
 export const importUsers = async (req: Request, res: Response) => {
   try {
     const { data } = req.body;
@@ -16,6 +65,36 @@ export const importUsers = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid data format" });
 
     let importedCount = 0;
+
+    const usernamesInFile = data
+      .filter((item) => item.username)
+      .map((item) => item.username);
+    const hasDuplicates = usernamesInFile.some(
+      (item, idx) => usernamesInFile.indexOf(item) !== idx,
+    );
+    if (hasDuplicates) {
+      return res
+        .status(400)
+        .json({
+          message: "Danh sách trong file Excel chứa các mã bị trùng lặp",
+        });
+    }
+
+    const phonesInFile = data
+      .filter((item) => item.phone)
+      .map((item) => item.phone?.toString());
+    const hasDuplicatePhones = phonesInFile.some(
+      (item, idx) => phonesInFile.indexOf(item) !== idx,
+    );
+    if (hasDuplicatePhones) {
+      return res
+        .status(400)
+        .json({
+          message:
+            "Danh sách trong file Excel chứa các số điện thoại bị trùng lặp",
+        });
+    }
+
     for (const item of data) {
       if (!item.name || !item.role) continue;
 
@@ -98,27 +177,41 @@ export const importUsers = async (req: Request, res: Response) => {
       }
 
       const existing = await User.findOne({ where: { username } });
-      if (existing) continue;
+      if (existing) {
+        return res
+          .status(400)
+          .json({
+            message: `Mã tài khoản sinh viên/giảng viên bị trùng lặp: ${username}`,
+          });
+      }
+
+      if (item.phone) {
+        const existingPhone = await User.findOne({
+          where: { phone: item.phone.toString() },
+        });
+        if (existingPhone) {
+          return res
+            .status(400)
+            .json({
+              message: `Số điện thoại bị trùng lặp: ${item.phone} (thuộc về người dùng: ${existingPhone.name} - ${existingPhone.username})`,
+            });
+        }
+      }
 
       let email = item.email;
       if (!email) {
         email = `${username}@uni.edu.vn`;
       }
-      let courseId = item.courseId;
 
-      if (!courseId && item.courseCode) {
-        const course = await Course.findOne({
-          where: { code: item.courseCode }
-        });
-
-        if (course) {
-          courseId = course.id;
-        }
+      let userPassword = item.password ? item.password.toString() : "123456";
+      if (userPassword.length < 6) {
+        userPassword = "123456";
       }
+
       await User.create({
         username: username,
-        password: item.password ? item.password.toString() : '123',
-        name: item.name || 'Unknown',
+        password: userPassword,
+        name: item.name || "Unknown",
         email: email,
         phone: item.phone,
         address: item.address,
@@ -126,67 +219,13 @@ export const importUsers = async (req: Request, res: Response) => {
         majorId,
         departmentId,
         classId,
-        courseId,
-        status: 'ACTIVE',
-      });
-    }
-    res.json({ message: `Imported ${importedCount} users successfully` });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ message: "Server error during import" });
-  }
-};
-
-export const importCourses = async (req: Request, res: Response) => {
-  try {
-    const { data } = req.body;
-    if (!Array.isArray(data))
-      return res.status(400).json({ message: "Invalid data format" });
-
-    let importedCount = 0;
-    for (const item of data) {
-      if (!item.name || !item.code) continue;
-
-      const existing = await Course.findOne({ where: { code: item.code } });
-      if (existing) continue;
-
-      let teacherId = item.teacherId;
-      if (!teacherId && (item.teacherEmail || item.teacherUsername)) {
-        const query: any = {};
-        if (item.teacherEmail) query.email = item.teacherEmail;
-        else query.username = item.teacherUsername;
-
-        const teacher = await User.findOne({ where: query });
-        if (teacher) teacherId = teacher.id;
-      }
-
-      if (!teacherId) continue; // Still need a teacher
-
-      let majorId = item.majorId;
-      if (!majorId && item.majorName) {
-        const major = await Major.findOne({ where: { name: item.majorName } });
-        if (major) majorId = major.id;
-      }
-
-      let classId = item.classId;
-      if (!classId && item.className) {
-        const cls = await Class.findOne({ where: { name: item.className } });
-        if (cls) classId = cls.id;
-      }
-
-      await Course.create({
-        name: item.name,
-        code: item.code,
-        teacherId: item.teacherId,
-        credits: item.credits || 3,
-        majorId: item.majorId || null,
-        schedule: item.schedule || "Thứ Hai (07:00 - 09:30)",
-        type: item.type || "Standard",
+        status: "ACTIVE",
+        mustChangePassword: true,
       });
       importedCount++;
     }
 
-    res.json({ message: `Imported ${importedCount} courses successfully` });
+    res.json({ message: `Imported ${importedCount} users successfully` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error during import" });
@@ -274,7 +313,98 @@ export const importCurriculum = async (req: Request, res: Response) => {
 
     let importedCount = 0;
     for (const item of data) {
-      if (!item.semesterNumber) continue;
+      const semesterNumber = item["Học kỳ"] || item.semesterNumber;
+      if (!semesterNumber) continue;
+
+      let majorId = item.majorId;
+      const majorName = item["Tên ngành"] || item.majorName;
+      if (!majorId && majorName) {
+        const major = await Major.findOne({ where: { name: majorName } });
+        if (major) majorId = major.id;
+      }
+
+      let subjectId = item.subjectId;
+      const subjectCode = item["Mã môn học"] || item.subjectCode;
+      const subjectName = item.subjectName;
+
+      if (!subjectId && (subjectCode || subjectName)) {
+        const query: any = {};
+        if (subjectCode) query.code = subjectCode;
+        else query.name = subjectName;
+
+        const subject = await Subject.findOne({ where: query });
+        if (subject) subjectId = subject.id;
+      }
+
+      if (!majorId) {
+        return res
+          .status(400)
+          .json({
+            message: `Không tìm thấy ngành học với tên "${majorName || "Trống"}"`,
+          });
+      }
+
+      if (!subjectId) {
+        return res
+          .status(400)
+          .json({
+            message: `Không tìm thấy môn học với mã "${subjectCode || subjectName || "Trống"}"`,
+          });
+      }
+
+      await Curriculum.create({
+        majorId,
+        subjectId,
+        semesterNumber: semesterNumber,
+      });
+      if (subjectId) {
+        await Subject.update(
+          {
+            semesterNumber,
+          },
+          {
+            where: {
+              id: subjectId,
+            },
+          },
+        );
+      }
+      importedCount++;
+    }
+
+    res.json({
+      message: `Imported ${importedCount} curriculum rows successfully`,
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: "Server error during import" });
+  }
+};
+
+export const importCourses = async (req: Request, res: Response) => {
+  try {
+    const { data } = req.body;
+    if (!Array.isArray(data))
+      return res.status(400).json({ message: "Invalid data format" });
+
+    let importedCount = 0;
+    for (const item of data) {
+      if (!item.name || !item.code) continue;
+
+      const existing = await Course.findOne({ where: { code: item.code } });
+      if (existing) continue;
+
+      let teacherId = item.teacherId;
+      if (!teacherId && (item.teacherEmail || item.teacherUsername)) {
+        const query: any = {};
+        if (item.teacherEmail) query.email = item.teacherEmail;
+        else query.username = item.teacherUsername;
+
+        const teacher = await User.findOne({ where: query });
+        if (teacher) teacherId = teacher.id;
+      }
+
+      if (!teacherId) continue; // Still need a teacher
 
       let majorId = item.majorId;
       if (!majorId && item.majorName) {
@@ -282,29 +412,28 @@ export const importCurriculum = async (req: Request, res: Response) => {
         if (major) majorId = major.id;
       }
 
-      let subjectId = item.subjectId;
-      if (!subjectId && (item.subjectCode || item.subjectName)) {
-        const query: any = {};
-        if (item.subjectCode) query.code = item.subjectCode;
-        else query.name = item.subjectName;
-
-        const subject = await Subject.findOne({ where: query });
-        if (subject) subjectId = subject.id;
+      let classId = item.classId;
+      if (!classId && item.className) {
+        const cls = await Class.findOne({ where: { name: item.className } });
+        if (cls) classId = cls.id;
       }
 
-      if (!majorId || !subjectId) continue;
-
-      await Curriculum.create({
-        majorId,
-        subjectId,
-        semesterNumber: item.semesterNumber,
+      await Course.create({
+        name: item.name,
+        code: item.code,
+        teacherId,
+        credits: item.credits || 3,
+        majorId: majorId || null,
+        classId: classId || null,
+        schedule: item.schedule || "Thứ Hai (07:00 - 09:30)",
+        type: item.type || "Standard",
+        startDate: item.startDate || null,
+        endDate: item.endDate || null,
       });
       importedCount++;
     }
 
-    res.json({
-      message: `Imported ${importedCount} curriculum rows successfully`,
-    });
+    res.json({ message: `Imported ${importedCount} courses successfully` });
   } catch (error) {
     console.error(error);
     res.status(500).json({ message: "Server error during import" });

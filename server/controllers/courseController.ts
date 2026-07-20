@@ -146,6 +146,7 @@ export const createCourse = async (req: Request, res: Response) => {
       semesterId,
       totalPeriods,
       weeks,
+      startDate,
     } = req.body;
     const course = await Course.create({
       name,
@@ -160,6 +161,7 @@ export const createCourse = async (req: Request, res: Response) => {
       semesterId,
       totalPeriods: totalPeriods || 45,
       weeks: weeks || 10,
+      startDate,
     });
     const createdCourse = await Course.findByPk(course.id, {
       include: [
@@ -206,6 +208,8 @@ export const updateCourse = async (req: Request, res: Response) => {
       course.semesterId = req.body.semesterId || course.semesterId;
       course.totalPeriods = req.body.totalPeriods || course.totalPeriods;
       course.weeks = req.body.weeks || course.weeks;
+      course.startDate = req.body.startDate || course.startDate;
+
       await course.save();
       const updatedCourse = await Course.findByPk(course.id, {
         include: [
@@ -275,10 +279,10 @@ export const registerCourse = async (req: Request, res: Response) => {
           .status(400)
           .json({ message: "Already registered for this course" });
       }
-
       await Enrollment.create({
         courseId: course.id,
         studentId,
+        startDate: course.startDate,
         status: "Enrolled",
       });
 

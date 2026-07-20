@@ -9,6 +9,10 @@ export interface AttendanceAttributes {
   courseId: number;
   date: string;
   status: 'Present' | 'Absent' | 'Late';
+  latitude?: number;
+  longitude?: number;
+  hasLeftClass?: boolean;
+  leftClassAt?: Date;
 }
 
 export interface AttendanceCreationAttributes extends Omit<AttendanceAttributes, 'id'> {}
@@ -19,7 +23,11 @@ export class Attendance extends Model<AttendanceAttributes, AttendanceCreationAt
   public courseId!: number;
   public date!: string;
   public status!: 'Present' | 'Absent' | 'Late';
-  // phải ghi nhận lại điểm danh để đuổi 
+  public latitude?: number;
+  public longitude?: number;
+  public hasLeftClass?: boolean;
+  public leftClassAt?: Date;
+
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
@@ -57,10 +65,27 @@ Attendance.init(
       type: DataTypes.ENUM('Present', 'Absent', 'Late'),
       allowNull: false,
     },
+    latitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    longitude: {
+      type: DataTypes.FLOAT,
+      allowNull: true,
+    },
+    hasLeftClass: {
+      type: DataTypes.BOOLEAN,
+      allowNull: true,
+      defaultValue: false,
+    },
+    leftClassAt: {
+      type: DataTypes.DATE,
+      allowNull: true,
+    },
   },
   {
     sequelize,
-    tableName: 'attendances',
+    tableName: 'Attendances',
   }
 );
 
@@ -69,4 +94,5 @@ Course.hasMany(Attendance, { foreignKey: 'courseId', as: 'attendances' });
 
 Attendance.belongsTo(User, { foreignKey: 'studentId', as: 'student' });
 User.hasMany(Attendance, { foreignKey: 'studentId', as: 'attendances' });
+
 export default Attendance;

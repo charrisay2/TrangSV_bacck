@@ -4,7 +4,7 @@ const bcrypt = require("bcryptjs");
 module.exports = {
   up: async (queryInterface, Sequelize) => {
     const now = new Date();
-    const hashedPw = await bcrypt.hash("123", 10);
+    const hashedPw = await bcrypt.hash("123456", 10);
     const joinDateDefault = new Date("2025-08-15");
 
     // ==========================================

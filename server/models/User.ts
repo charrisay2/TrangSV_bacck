@@ -1,5 +1,3 @@
-// User.ts
-
 import { DataTypes, Model, Optional } from "sequelize";
 import sequelize from "../config/database";
 import bcrypt from "bcryptjs";
@@ -17,19 +15,36 @@ interface UserAttributes {
   phone?: string;
   address?: string;
   joinDate?: string | Date;
+
   role: "ADMIN" | "TEACHER" | "STUDENT";
-  status: "ACTIVE" | "RESERVED" | "GRADUATED";
+
+  status:
+    | "ACTIVE"
+    | "RESERVED"
+    | "GRADUATED"
+    | "INACTIVE";
+
   avatar?: string;
+
   classId?: number;
   departmentId?: number;
   majorId?: number;
   courseId?: number;
+
+  mustChangePassword?: boolean;
 }
 
-interface UserCreationAttributes extends Optional<
-  UserAttributes,
-  "id" | "status"
-> {}
+interface UserCreationAttributes
+  extends Optional<
+    UserAttributes,
+    | "id"
+    | "status"
+    | "mustChangePassword"
+    | "courseId"
+    | "classId"
+    | "departmentId"
+    | "majorId"
+  > {}
 
 class User
   extends Model<UserAttributes, UserCreationAttributes>
@@ -43,8 +58,15 @@ class User
   public phone!: string;
   public address!: string;
   public joinDate!: string | Date;
+
   public role!: "ADMIN" | "TEACHER" | "STUDENT";
-  public status!: "ACTIVE" | "RESERVED" | "GRADUATED";
+
+  public status!:
+    | "ACTIVE"
+    | "RESERVED"
+    | "GRADUATED"
+    | "INACTIVE";
+
   public avatar!: string;
 
   public classId!: number;
@@ -52,10 +74,14 @@ class User
   public majorId!: number;
   public courseId!: number;
 
+  public mustChangePassword!: boolean;
+
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 
-  public async comparePassword(candidatePassword: string): Promise<boolean> {
+  public async comparePassword(
+    candidatePassword: string,
+  ): Promise<boolean> {
     return bcrypt.compare(candidatePassword, this.password);
   }
 }
@@ -109,13 +135,22 @@ User.init(
     },
 
     role: {
-      type: DataTypes.ENUM("ADMIN", "TEACHER", "STUDENT"),
+      type: DataTypes.ENUM(
+        "ADMIN",
+        "TEACHER",
+        "STUDENT",
+      ),
       allowNull: false,
       defaultValue: "STUDENT",
     },
 
     status: {
-      type: DataTypes.ENUM("ACTIVE", "RESERVED", "GRADUATED"),
+      type: DataTypes.ENUM(
+        "ACTIVE",
+        "RESERVED",
+        "GRADUATED",
+        "INACTIVE",
+      ),
       allowNull: false,
       defaultValue: "ACTIVE",
     },
@@ -164,6 +199,12 @@ User.init(
       },
       onDelete: "SET NULL",
     },
+
+    mustChangePassword: {
+      type: DataTypes.BOOLEAN,
+      allowNull: false,
+      defaultValue: false,
+    },
   },
   {
     sequelize,
@@ -173,14 +214,20 @@ User.init(
       beforeCreate: async (user) => {
         if (user.password) {
           const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
+          user.password = await bcrypt.hash(
+            user.password,
+            salt,
+          );
         }
       },
 
       beforeUpdate: async (user) => {
         if (user.changed("password")) {
           const salt = await bcrypt.genSalt(10);
-          user.password = await bcrypt.hash(user.password, salt);
+          user.password = await bcrypt.hash(
+            user.password,
+            salt,
+          );
         }
       },
     },

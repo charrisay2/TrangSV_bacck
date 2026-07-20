@@ -33,6 +33,7 @@ export const createUser = async (req: Request, res: Response) => {
     const { name, phone, address, joinDate, role, avatar, classId, departmentId, majorId, status } = req.body;
     let { username, email, password } = req.body;
 
+    // Tự động sinh mã username (Mã sinh viên / Mã giảng viên / Mã admin) nếu không truyền vào
     if (!username) {
       if (role === 'STUDENT') {
         const studentClass = await Class.findByPk(classId);
@@ -90,8 +91,11 @@ export const createUser = async (req: Request, res: Response) => {
       email = `${username}@uni.edu.vn`;
     }
     
+    // Validate và bổ sung mật khẩu mặc định an toàn hơn (ít nhất 6 ký tự)
     if (!password) {
-      password = '123';
+      password = '123456';
+    } else if (password.length < 6) {
+      return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 6 ký tự' });
     }
 
     const userExists = await User.findOne({ where: { username } });
@@ -118,7 +122,7 @@ export const createUser = async (req: Request, res: Response) => {
       departmentId,
       majorId,
       status: status || 'ACTIVE',
-  
+      mustChangePassword: role === 'STUDENT', // Giữ logic bắt buộc sinh viên đổi mật khẩu ở lần đầu đăng nhập
     });
 
     const userWithAssociations = await User.findByPk(user.id, {
@@ -145,20 +149,21 @@ export const updateUser = async (req: Request, res: Response) => {
     const user = await User.findByPk(req.params.id);
 
     if (user) {
-      // Do not update name, username, joinDate, role as per requirements
-      // user.name = req.body.name || user.name;
+      // Không cập nhật các trường name, username, joinDate, role theo yêu cầu nghiệp vụ
       user.email = req.body.email || user.email;
       user.phone = req.body.phone !== undefined ? req.body.phone : user.phone;
       user.address = req.body.address !== undefined ? req.body.address : user.address;
-      // user.joinDate = req.body.joinDate !== undefined ? req.body.joinDate : user.joinDate;
-      // user.role = req.body.role || user.role;
       user.avatar = req.body.avatar || user.avatar;
       user.classId = req.body.classId !== undefined ? req.body.classId : user.classId;
       user.departmentId = req.body.departmentId !== undefined ? req.body.departmentId : user.departmentId;
       user.majorId = req.body.majorId !== undefined ? req.body.majorId : user.majorId;
       user.status = req.body.status || user.status;
 
+      // Kiểm tra bảo mật độ dài mật khẩu khi thay đổi
       if (req.body.password) {
+        if (req.body.password.length < 6) {
+          return res.status(400).json({ message: 'Mật khẩu phải có ít nhất 6 ký tự' });
+        }
         user.password = req.body.password;
       }
 
