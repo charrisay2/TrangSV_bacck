@@ -1,7 +1,6 @@
 import multer from "multer";
 import { CloudinaryStorage } from "multer-storage-cloudinary";
-import cloudinary from "../SVHKback/server/config/cloudinary";
-
+import cloudinary from "./server/config/cloudinary";
 const storage = new CloudinaryStorage({
   cloudinary,
   params: async (req, file) => ({
