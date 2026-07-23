@@ -37,7 +37,7 @@ export const createRequest = async (req: Request, res: Response) => {
     let attachmentUrl = null;
 
     if (req.file) {
-      attachmentUrl = `${process.env.BASE_URL}/uploads/${req.file.filename}`;
+      attachmentUrl = (req.file as any).path;
     }
 
     const newRequest = await RequestModel.create({

@@ -1,21 +1,15 @@
 import multer from "multer";
-import path from "path";
-import fs from "fs";
+import { CloudinaryStorage } from "multer-storage-cloudinary";
+import cloudinary from "../SVHKback/server/config/cloudinary";
 
-if (!fs.existsSync("uploads")) {
-  fs.mkdirSync("uploads");
-}
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, "uploads/");
-  },
-
-  filename: (req, file, cb) => {
-    cb(
-      null,
-      Date.now() + path.extname(file.originalname)
-    );
-  },
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: async (req, file) => ({
+    folder: "svhk",
+    allowed_formats: ["jpg", "jpeg", "png", "gif", "pdf"],
+    resource_type: "auto",
+    public_id: `${Date.now()}`,
+  }),
 });
 
 const upload = multer({
